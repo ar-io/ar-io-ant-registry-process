@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "allowSyntheticDefaultImports": true,
+    "lib": ["esnext"],
+    "listEmittedFiles": false,
+    "listFiles": false,
+    "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": true,
+    "module": "nodenext",
+    "alwaysStrict": true,
+    "types": ["node"],
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    /* Additional Checks */
+    "pretty": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true
+  },
+  "include": ["src", "test", "tools"],
+  "exclude": ["node_modules"],
+  "ts-node": {
+    "esm": true,
+    "swc": true
+  }
+}
