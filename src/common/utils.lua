@@ -1,6 +1,7 @@
 -- the majority of this file came from https://github.com/permaweb/aos/blob/main/process/utils.lua
 
 local constants = require(".common.constants")
+local json = require(".common.json")
 local utils = { _version = "0.0.1" }
 
 local function isArray(table)
@@ -208,6 +209,42 @@ function utils.validateOwner(caller)
 		isOwner = true
 	end
 	assert(isOwner, "Sender is not the owner.")
+end
+
+function utils.validateUndername(name)
+	local valid = string.match(name, constants.UNDERNAME_REGEXP) == nil
+	assert(valid ~= false, "Invalid undername")
+end
+
+function utils.validateTTLSeconds(ttl)
+	local valid = type(ttl) == "number" and ttl >= constants.MIN_TTL_SECONDS and ttl <= constants.MAX_TTL_SECONDS
+	return assert(valid ~= false, "Invalid TTL Seconds")
+end
+
+function utils.parseAntState(data)
+	local decoded = json.decode(data)
+	local balances = decoded.Balances
+	local controllers = decoded.Controllers
+	local records = decoded.Records
+	local name = decoded.Name
+	local ticker = decoded.Ticker
+	local owner = decoded.Owner
+	assert(type(name) == "string", "Name must be a string")
+	assert(type(ticker) == "string", "Ticker must be a string")
+	assert(type(balances) == "table", "Balances must be a table")
+	for k, v in pairs(balances) do
+		balances[k] = tonumber(v)
+	end
+	assert(type(controllers) == "table", "Controllers must be a table")
+	assert(type(records) == "table", "Records must be a table")
+	assert(type(owner) == "string", "Owner must be a string")
+	for k, v in pairs(records) do
+		utils.validateUndername(k)
+		assert(type(v) == "table", "Records values must be tables")
+		utils.validateArweaveId(v.transactionId)
+		utils.validateTTLSeconds(v.ttlSeconds)
+	end
+	return decoded
 end
 
 function utils.assertHasPermission(from)
