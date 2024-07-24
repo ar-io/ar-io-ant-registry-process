@@ -16,7 +16,7 @@
     "@permaweb/aoconnect": "^0.0.56",
     "@swc/core": "^1.6.13",
     "@trivago/prettier-plugin-sort-imports": "^4.2.0",
-    "@types/node": "^20.14.10",
+    "@types/node": "^20.14.12",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^6.4.0",
     "arweave": "^1.15.1",
