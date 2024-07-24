@@ -3,6 +3,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export const kilobyte = 1024;
+export const megabyte = kilobyte * 1024;
+export const gigabyte = megabyte * 1024;
 export const STUB_ADDRESS = ''.padEnd(43, '1');
 /* ao READ-ONLY Env Variables */
 export const AO_LOADER_HANDLER_ENV = {
@@ -21,7 +25,7 @@ export const AO_LOADER_OPTIONS = {
   format: 'wasm64-unknown-emscripten-draft_2024_02_15',
   inputEncoding: 'JSON-1',
   outputEncoding: 'JSON-1',
-  memoryLimit: '524288000', // in bytes
+  memoryLimit: gigabyte,
   computeLimit: (9e12).toString(),
   extensions: [],
 };
@@ -29,7 +33,7 @@ export const AO_LOADER_OPTIONS = {
 export const AOS_WASM = fs.readFileSync(
   path.join(
     __dirname,
-    'fixtures/aos-cbn0KKrBZH7hdNkNokuXLtGryrWM--PjSTBqIzw9Kkk.wasm',
+    'fixtures/aos-sqlite-Jx6FyZ99VbtT34ICVcUKONzYmX5syr2DstyCo8NGJc8.wasm',
   ),
 );
 
