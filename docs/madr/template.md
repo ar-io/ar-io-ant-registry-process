@@ -1,17 +1,20 @@
 # [short title of solved problem and solution]
 
-- Status: [proposed | rejected | accepted | deprecated | superseded by [ADR-5](5-example.md)]
+- Status: [proposed | rejected | accepted | deprecated | superseded by
+  [ADR-5](5-example.md)]
 - Deciders: [list everyone involved in the decision]
 - Date: [YYYY-MM-DD]
 - Authors: [list of authors]
 
 ## Context and Problem Statement
 
-[Describe the context and the problem that needs to be solved, capturing the background and why this decision is necessary.]
+[Describe the context and the problem that needs to be solved, capturing the
+background and why this decision is necessary.]
 
 ## Decision Drivers
 
-[Identify key factors that influence the decision, such as requirements, constraints, and other considerations.]
+[Identify key factors that influence the decision, such as
+requirements, constraints, and other considerations.]
 
 - [driver 1]
 - [driver 2]
@@ -19,7 +22,8 @@
 
 ## Considered Options
 
-[List the options that were considered to address the problem, providing a brief overview of each.]
+[List the options that were considered to address the problem, providing a brief
+overview of each.]
 
 - [option 1]
 - [option 2]
@@ -27,7 +31,8 @@
 
 ## Decision Outcome
 
-[Describe the decision that was made, including why it was chosen over the other options.]
+[Describe the decision that was made, including why it was chosen over the
+other options.]
 
 ### Positive Consequences
 
@@ -70,7 +75,8 @@
 
 ## Links
 
-[Include any relevant links to documents, discussions, or other resources that provide additional context or background information.]
+[Include any relevant links to documents, discussions, or other resources that
+provide additional context or background information.]
 
 - [link 1](url)
 - [link 2](url)
