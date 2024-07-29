@@ -3,6 +3,8 @@ local sqlite3 = require("lsqlite3")
 local dbAdmin = require(".common.db.admin")
 local utils = require(".common.utils")
 local main = {}
+-- just to ignore lint warnings
+local ao = ao or {}
 
 local camel = utils.camelCase
 main.init = function()
@@ -15,7 +17,6 @@ main.init = function()
 		Register = "Register",
 		StateNotice = "State-Notice",
 		AccessControlList = "Access-Control-List",
-		GetAllAnts = "Get-All-Ants", -- Utility method that could be expanded on
 	}
 
 	Handlers.add(
@@ -23,19 +24,9 @@ main.init = function()
 		Handlers.utils.hasMatchingTag("Action", ActionMap.Register),
 		ANT_DB_ADMIN:createSafeTransaction(function(msg)
 			print("Action: " .. ActionMap.Register)
-			local antId = msg.Tags["Process-Id"]
-			assert(antId, "Process-Id tag is required")
 
-			local idStatus, idRes = pcall(utils.validateArweaveId, antId)
-			if not idStatus then
-				ao.send({
-					Target = msg.From,
-					Action = "Register-Notice-Failure",
-					["Message-Id"] = msg.Id,
-					Data = tostring(idRes),
-				})
-				return
-			end
+			local antId = msg.Tags["Process-Id"]
+			assert(type(antId) == "string", "Process-Id tag is required")
 
 			local registerStatus, registerRes =
 				pcall(ANT_DB_ADMIN.register, ANT_DB_ADMIN, antId, tonumber(msg.Timestamp))
@@ -102,7 +93,8 @@ main.init = function()
 				end
 			end
 
-			local aclUpdateStatus, aclUpdateRes = pcall(ANT_DB_ADMIN.updateACL, ANT_DB_ADMIN, msg.From, stateRes)
+			local aclUpdateStatus, aclUpdateRes =
+				pcall(ANT_DB_ADMIN.updateACL, ANT_DB_ADMIN, msg.From, stateRes, tonumber(msg.Timestamp))
 
 			if not aclUpdateStatus then
 				ao.send({
@@ -151,31 +143,6 @@ main.init = function()
 				Action = "Access-Control-List-Notice",
 				["Message-Id"] = msg.Id,
 				Data = json.encode(antIdsRes),
-			})
-		end)
-	)
-
-	Handlers.add(
-		camel(ActionMap.GetAllAnts),
-		Handlers.utils.hasMatchingTag("Action", ActionMap.GetAllAnts),
-		ANT_DB_ADMIN:createSafeTransaction(function(msg)
-			print("Action: " .. ActionMap.GetAllAnts)
-			local antsRes, ants = pcall(ANT_DB_ADMIN.getAllAnts, ANT_DB_ADMIN)
-
-			if not antsRes then
-				ao.send({
-					Target = msg.From,
-					Action = "Get-All-Ants-Failure",
-					["Message-Id"] = msg.Id,
-					Data = ants,
-				})
-				error(ants)
-			end
-			-- Send the list of ants as a JSON array
-			ao.send({
-				Target = msg.From,
-				Action = "Get-All-Ants-Notice",
-				Data = json.encode(ants),
 			})
 		end)
 	)

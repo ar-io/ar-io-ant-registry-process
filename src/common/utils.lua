@@ -1,6 +1,5 @@
 -- the majority of this file came from https://github.com/permaweb/aos/blob/main/process/utils.lua
 
-local constants = require(".common.constants")
 local json = require(".common.json")
 local utils = { _version = "0.0.1" }
 
@@ -197,30 +196,6 @@ function utils.reply(msg)
 	Handlers.utils.reply(msg)
 end
 
-function utils.validateArweaveId(id)
-	local valid = string.match(id, constants.ARWEAVE_ID_REGEXP) == nil
-
-	assert(valid == true, constants.INVALID_ARWEAVE_ID_MESSAGE)
-end
-
-function utils.validateOwner(caller)
-	local isOwner = false
-	if Owner == caller or Balances[caller] or ao.env.Process.Id == caller then
-		isOwner = true
-	end
-	assert(isOwner, "Sender is not the owner.")
-end
-
-function utils.validateUndername(name)
-	local valid = string.match(name, constants.UNDERNAME_REGEXP) == nil
-	assert(valid ~= false, "Invalid undername")
-end
-
-function utils.validateTTLSeconds(ttl)
-	local valid = type(ttl) == "number" and ttl >= constants.MIN_TTL_SECONDS and ttl <= constants.MAX_TTL_SECONDS
-	return assert(valid ~= false, "Invalid TTL Seconds")
-end
-
 function utils.parseAntState(data)
 	local decoded = json.decode(data)
 	local balances = decoded.Balances
@@ -238,29 +213,8 @@ function utils.parseAntState(data)
 	assert(type(controllers) == "table", "Controllers must be a table")
 	assert(type(records) == "table", "Records must be a table")
 	assert(type(owner) == "string", "Owner must be a string")
-	for k, v in pairs(records) do
-		utils.validateUndername(k)
-		assert(type(v) == "table", "Records values must be tables")
-		utils.validateArweaveId(v.transactionId)
-		utils.validateTTLSeconds(v.ttlSeconds)
-	end
-	return decoded
-end
 
-function utils.assertHasPermission(from)
-	for _, c in ipairs(Controllers) do
-		if c == from then
-			-- if is controller, return true
-			return
-		end
-	end
-	if Owner == from then
-		return
-	end
-	if ao.env.Process.Id == from then
-		return
-	end
-	assert(false, "Only controllers and owners can set controllers, records, and change metadata.")
+	return decoded
 end
 
 function utils.camelCase(str)
@@ -276,50 +230,6 @@ function utils.camelCase(str)
 	end)
 
 	return str
-end
-
-utils.notices = {}
-
-function utils.notices.credit(msg)
-	local notice = {
-		Target = msg.From,
-		Action = "Credit-Notice",
-		Recipient = msg.Recipient,
-		Quantity = tostring(1),
-	}
-	for tagName, tagValue in pairs(msg) do
-		-- Tags beginning with "X-" are forwarded
-		if string.sub(tagName, 1, 2) == "X-" then
-			notice[tagName] = tagValue
-		end
-	end
-
-	return notice
-end
-
-function utils.notices.debit(msg)
-	local notice = {
-		Target = msg.From,
-		Action = "Debit-Notice",
-		Recipient = msg.Recipient,
-		Quantity = tostring(1),
-	}
-	-- Add forwarded tags to the credit and debit notice messages
-	for tagName, tagValue in pairs(msg) do
-		-- Tags beginning with "X-" are forwarded
-		if string.sub(tagName, 1, 2) == "X-" then
-			notice[tagName] = tagValue
-		end
-	end
-
-	return notice
-end
-
--- @param notices table
-function utils.notices.sendNotices(notices)
-	for _, notice in ipairs(notices) do
-		ao.send(notice)
-	end
 end
 
 return utils

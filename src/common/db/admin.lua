@@ -55,9 +55,10 @@ end
 
 function dbAdmin:register(antId, timestamp)
 	-- Prepare the SQL statement with parameters to avoid SQL injection
-	local stmt = self.db:prepare("INSERT INTO ant_index (ant_id, owner, registered_at) VALUES (?, ?, ?)")
+	local stmt =
+		self.db:prepare("INSERT INTO ant_index (ant_id, owner, registered_at, last_updated) VALUES (?, ?, ?, ?)")
 	assert(stmt, "Failed to prepare insert statement: " .. self.db:errmsg())
-	stmt:bind_values(antId, "unknown", timestamp)
+	stmt:bind_values(antId, "unknown", timestamp, timestamp)
 	stmt.step(stmt)
 	stmt:finalize()
 end
@@ -87,18 +88,18 @@ function dbAdmin:isRegistered(antId)
 	return row
 end
 
-function dbAdmin:updateACL(antId, state)
+function dbAdmin:updateACL(antId, state, timestamp)
 	-- Passing in state here allows us to have a simple interface elsewhere
 	-- may add or extend tables here in the future using more parts of the state
 	-- errors bubble up from here, should call with pcall
-	self:updateAntIndex(antId, state.Owner)
+	self:updateAntIndex(antId, state.Owner, timestamp)
 	self:updateControllersIndex(antId, state.Controllers)
 end
 
-function dbAdmin:updateAntIndex(antId, owner)
-	local stmt = self.db:prepare("UPDATE ant_index SET owner = ? WHERE ant_id = ?")
+function dbAdmin:updateAntIndex(antId, owner, timestamp)
+	local stmt = self.db:prepare("UPDATE ant_index SET owner = ?, last_updated = ? WHERE ant_id = ?")
 	assert(stmt, "Failed to prepare update statement: " .. self.db:errmsg())
-	stmt:bind_values(owner, antId)
+	stmt:bind_values(owner, timestamp, antId)
 	stmt:step()
 	stmt:finalize()
 end
