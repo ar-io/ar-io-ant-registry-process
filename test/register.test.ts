@@ -31,7 +31,7 @@ describe('register', async () => {
     );
   }
 
-  it('Should register an ant', async () => {
+  it('should register an ant', async () => {
     const antId = ''.padEnd(43, 'register-test-ant-id');
     const registerResult = await sendMessage({
       Tags: [
@@ -67,21 +67,20 @@ describe('register', async () => {
       registerResult.Memory,
     );
 
-    console.dir(stateNoticeResult, { depth: null });
-
     // if we have messages in this case we have errors
     assert.strictEqual(stateNoticeResult.Messages.length, 0);
 
     const allAntsResult = await sendMessage(
       {
-        Tags: [{ name: 'Action', value: 'Get-All-Ants' }],
+        Tags: [
+          { name: 'Action', value: 'Access-Control-List' },
+          { name: 'Address', value: STUB_ADDRESS },
+        ],
       },
       stateNoticeResult.Memory,
     );
 
     const ants = JSON.parse(allAntsResult.Messages[0].Data);
-    assert.strictEqual(ants.length, 1);
-    assert.strictEqual(ants[0].ant_id, antId);
-    assert.strictEqual(ants[0].owner, STUB_ADDRESS);
+    assert.strictEqual(ants[0], antId);
   });
 });
