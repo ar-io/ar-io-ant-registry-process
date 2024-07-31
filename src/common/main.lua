@@ -11,15 +11,54 @@ local function errorHandler(err)
 end
 
 main.init = function()
-	ANTS = ANTS or {}
 	-- Example ANT structure
 	-- ANTS["antId"] = {
 	--     Owner = "userId",
 	--     Controllers = {"userId1", "userId2"},
 	-- }
-	USERS = USERS or {}
-	-- Example USERS structure
-	-- USERS["userId"] = {"antId1", "antId2"}
+	ANTS = ANTS or {}
+
+	-- Example ADDRESSES structure - keyed references to the above ANTS structure
+	-- ADDRESSES["userAddress"] = {["antProcessId1"] = ANTS["antProcessId1"], ANTS["antProcessId2"]}
+	ADDRESSES = ADDRESSES or {}
+
+	--[[
+		position defaults to "add"
+		
+		Behavior:
+		- "add" - Adds the handler to the end of the list
+		- "prepend" - Adds the handler to the beginning of the list
+		- "append" - Adds the handler to the end of the list
+
+		create a handler by matching an action name to an Action tag on the message
+		if the handler function throws an error, send an error message to the sender
+
+	]]
+	local function createActionHandler(action, msgHandler, position)
+		assert(type(position) == "string" or type(position) == "nil", errorHandler("Position must be a string or nil"))
+		assert(
+			position == nil or position == "add" or position == "prepend" or position == "append",
+			"Position must be one of 'add', 'prepend', 'append'"
+		)
+		return Handlers[position or "add"](camel(action), Handlers.utils.hasMatchingTag("Action", action), function(msg)
+			print("Handling Action [" .. msg.Id .. "]: " .. action)
+			local handlerStatus, handlerRes = xpcall(function()
+				msgHandler(msg)
+			end, errorHandler)
+
+			if not handlerStatus then
+				ao.send({
+					Target = msg.From,
+					Action = "Invalid-" .. action .. "-Notice",
+					Error = action .. "-Error",
+					["Message-Id"] = msg.Id,
+					Data = handlerRes,
+				})
+			end
+
+			return handlerRes
+		end)
+	end
 
 	local ActionMap = {
 		Register = "Register",
@@ -27,112 +66,67 @@ main.init = function()
 		AccessControlList = "Access-Control-List",
 	}
 
-	Handlers.add(camel(ActionMap.Register), Handlers.utils.hasMatchingTag("Action", ActionMap.Register), function(msg)
-		print("Action: " .. ActionMap.Register)
-
+	createActionHandler(ActionMap.Register, function(msg)
 		local antId = msg.Tags["Process-Id"]
 		assert(type(antId) == "string", "Process-Id tag is required")
+		assert(ANTS[antId] == nil, "ANT is already registered")
 
-		if ANTS[antId] then
-			ao.send({
-				Target = msg.From,
-				Action = "Register-Notice-Failure",
-				["Message-Id"] = msg.Id,
-				Data = "ANT is already registered",
-			})
-		else
-			ANTS[antId] = {
-				Owner = nil,
+		ANTS[antId] = {
+			Owner = nil,
+			Controllers = {},
+		}
+
+		ao.send({
+			Target = antId,
+			Action = "State",
+		})
+		ao.send({
+			Target = msg.From,
+			Action = "Register-Notice",
+		})
+	end)
+
+	createActionHandler(ActionMap.StateNotice, function(msg)
+		local stateRes = utils.parseAntState(msg.Data)
+		-- Check if already registered
+		local isRegistered = ANTS[msg.From] ~= nil
+
+		-- Register the ANT if not already registered
+		if not isRegistered then
+			ANTS[msg.From] = {
+				Owner = stateRes.Owner,
 				Controllers = {},
+				-- for cleaning function
+				RegisteredAt = tonumber(msg.Timestamp),
 			}
+		end
 
-			ao.send({
-				Target = antId,
-				Action = "State",
-			})
+		utils.updateAssociations(msg.From, stateRes)
+
+		-- Notify the ANT that it has been registered
+		if not isRegistered then
 			ao.send({
 				Target = msg.From,
 				Action = "Register-Notice",
+				["Message-Id"] = msg.Id,
 			})
 		end
 	end)
 
-	Handlers.add(
-		camel(ActionMap.StateNotice),
-		Handlers.utils.hasMatchingTag("Action", ActionMap.StateNotice),
-		function(msg)
-			print("Action: " .. ActionMap.StateNotice)
+	createActionHandler(ActionMap.AccessControlList, function(msg)
+		local address = msg.Tags["Address"]
+		assert(type(address) == "string", "Address is required")
 
-			local stateStatus, stateRes = xpcall(function()
-				return utils.parseAntState(msg.Data)
-			end, errorHandler)
-			if not stateStatus then
-				ao.send({
-					Target = msg.From,
-					Action = "State-Notice-Failure",
-					["Message-Id"] = msg.Id,
-					Data = tostring(stateRes),
-				})
-				return
-			end
+		local antIds = ADDRESSES[address] or {}
 
-			-- Check if already registered
-			local isRegistered = ANTS[msg.From] ~= nil
-
-			-- Register the ANT if not already registered
-			if not isRegistered then
-				ANTS[msg.From] = {
-					Owner = stateRes.Owner,
-					Controllers = {},
-					-- for cleaning function
-					RegisteredAt = tonumber(msg.Timestamp),
-				}
-			end
-
-			local aclUpdateStatus, aclUpdateRes = xpcall(function()
-				return utils.updateAssociations(msg.From, stateRes)
-			end, errorHandler)
-			if not aclUpdateStatus then
-				ao.send({
-					Target = msg.From,
-					Action = "State-Notice-Failure",
-					["Message-Id"] = msg.Id,
-					Data = aclUpdateRes,
-				})
-				return
-			end
-
-			-- Notify the ANT that it has been registered
-			if not isRegistered then
-				ao.send({
-					Target = msg.From,
-					Action = "Register-Notice",
-					["Message-Id"] = msg.Id,
-				})
-			end
-		end
-	)
-
-	Handlers.add(
-		camel(ActionMap.AccessControlList),
-		Handlers.utils.hasMatchingTag("Action", ActionMap.AccessControlList),
-		function(msg)
-			print("Action: " .. ActionMap.AccessControlList)
-
-			local address = msg.Tags["Address"]
-			assert(type(address) == "string", "Address is required")
-
-			local antIds = USERS[address] or {}
-
-			-- Send the list of ant_ids as a JSON array
-			ao.send({
-				Target = msg.From,
-				Action = "Access-Control-List-Notice",
-				["Message-Id"] = msg.Id,
-				Data = json.encode(antIds),
-			})
-		end
-	)
+		-- Send the list of ant_ids as a JSON array
+		ao.send({
+			Target = msg.From,
+			Action = "Access-Control-List-Notice",
+			["Message-Id"] = msg.Id,
+			Data = json.encode(antIds),
+		})
+	end)
 
 	Handlers.prepend("cleanOldRegistrations", function(msg)
 		return "continue"

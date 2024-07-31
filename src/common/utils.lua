@@ -244,20 +244,20 @@ end
 
 function utils.updateUserAssociations(antId, state, user)
 	-- remove previous associations
-	if USERS[user] and user ~= state.Owner and not utils.includes(user, state.Controllers) then
-		local antIndex = utils.indexOf(USERS[user], antId)
+	if ADDRESSES[user] and user ~= state.Owner and not utils.includes(user, state.Controllers) then
+		local antIndex = utils.indexOf(ADDRESSES[user], antId)
 		if antIndex then
-			table.remove(USERS[user], antIndex)
+			table.remove(ADDRESSES[user], antIndex)
 		end
 	end
 
 	-- add new associations
 	if user == state.Owner or utils.includes(user, state.Controllers) then
-		if not USERS[user] then
-			USERS[user] = {}
+		if not ADDRESSES[user] then
+			ADDRESSES[user] = {}
 		end
-		if not utils.includes(antId, USERS[user]) then
-			table.insert(USERS[user], antId)
+		if not utils.includes(antId, ADDRESSES[user]) then
+			table.insert(ADDRESSES[user], antId)
 		end
 	end
 end
