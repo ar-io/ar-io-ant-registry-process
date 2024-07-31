@@ -35,32 +35,18 @@ main.init = function()
 			Target = antId,
 			Action = "State",
 		})
+		ao.send({
+			Target = msg.From,
+			Action = "Register-Notice",
+			["Message-Id"] = msg.Id,
+		})
 	end)
 
 	utils.createActionHandler(ActionMap.StateNotice, function(msg)
 		local stateRes = utils.parseAntState(msg.Data)
 		-- Check if already registered
-		local isRegistered = ANTS[msg.From] ~= nil
-
-		-- Register the ANT if not already registered
-		if not isRegistered then
-			utils.register({
-				id = msg.From,
-				owner = stateRes.Owner,
-				controllers = stateRes.Controllers,
-			})
-		end
 
 		utils.updateAssociations(msg.From, stateRes)
-
-		-- Notify the ANT that it has been registered
-		if not isRegistered then
-			ao.send({
-				Target = msg.From,
-				Action = "Register-Notice",
-				["Message-Id"] = msg.Id,
-			})
-		end
 	end)
 
 	utils.createActionHandler(ActionMap.AccessControlList, function(msg)

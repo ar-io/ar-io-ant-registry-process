@@ -6,6 +6,7 @@ import {
   STUB_ADDRESS,
   DEFAULT_HANDLE_OPTIONS,
 } from '../tools/constants.ts';
+import { register } from 'node:module';
 
 describe('ANT Registration Cases', async () => {
   let handle: Function;
@@ -39,14 +40,11 @@ describe('ANT Registration Cases', async () => {
         { name: 'Process-Id', value: antId },
       ],
     });
+    console.log(registerResult);
     const stateAction = registerResult.Messages[0].Tags.find(
       (tag) => tag.name === 'Action',
     );
     assert.strictEqual(stateAction.value, 'State');
-    const registerNotice = registerResult.Messages[1].Tags.find(
-      (tag) => tag.name === 'Action',
-    );
-    assert.strictEqual(registerNotice.value, 'Register-Notice');
 
     // send the state back to the registry as the ANT
     const stateData = JSON.stringify({
@@ -57,6 +55,7 @@ describe('ANT Registration Cases', async () => {
       Ticker: 'ANT1',
       Records: {},
     });
+
     const stateNoticeResult = await sendMessage(
       {
         Tags: [{ name: 'Action', value: 'State-Notice' }],

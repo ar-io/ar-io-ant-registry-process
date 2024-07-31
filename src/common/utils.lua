@@ -242,24 +242,6 @@ function utils.indexOf(t, value)
 	return -1
 end
 
---- func description
--- @param {table} params
--- @param {string} params.id
--- @param {number} params.timestamp
--- @param {string | nil} params.owner
--- @param {table | nil} params.controllers
-function utils.register(params)
-	assert(type(params) == "table", "Register Params must be a table")
-	local id, owner, controllers = params.id, params.owner, params.controllers
-	assert(type(id) == "string", "ANT ID must be a string")
-	assert(type(owner) == "string" or owner == nil, "Owner must be a string")
-	assert(type(controllers) == "table", "Controllers must be a table")
-	ANTS[id] = {
-		Owner = owner,
-		Controllers = controllers,
-	}
-end
-
 function utils.controllerTableFromArray(t)
 	assert(type(t) == "table", "argument needs to be a table")
 	local map = {}
@@ -271,7 +253,7 @@ end
 
 function utils.updateAssociations(antId, state)
 	-- Remove previous associations for old owner and controllers
-	local oldAnt = ANTS[antId]
+	local oldAnt = ANTS[antId] or { Owner = nil, Controllers = {} }
 
 	local newOwner = state.Owner or "nilOwner"
 	local newControllers = utils.controllerTableFromArray(state.Controllers)
