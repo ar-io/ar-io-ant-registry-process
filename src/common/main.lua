@@ -26,12 +26,7 @@ main.init = function()
 	utils.createActionHandler(ActionMap.Register, function(msg)
 		local antId = msg.Tags["Process-Id"]
 		assert(type(antId) == "string", "Process-Id tag is required")
-		assert(ANTS[antId] == nil, "ANT is already registered")
 
-		utils.register({
-			id = antId,
-			timestamp = tonumber(msg.Timestamp),
-		})
 		--[[
 			Send a request message for current ANT state to the process. Expect back 
 			a State-Notice so that we can update the registered ANT settings.
@@ -39,10 +34,6 @@ main.init = function()
 		ao.send({
 			Target = antId,
 			Action = "State",
-		})
-		ao.send({
-			Target = msg.From,
-			Action = "Register-Notice",
 		})
 	end)
 
@@ -55,7 +46,6 @@ main.init = function()
 		if not isRegistered then
 			utils.register({
 				id = msg.From,
-				timestamp = tonumber(msg.Timestamp),
 				owner = stateRes.Owner,
 				controllers = stateRes.Controllers,
 			})
@@ -91,12 +81,6 @@ main.init = function()
 			["Message-Id"] = msg.Id,
 			Data = json.encode(antIds),
 		})
-	end)
-
-	Handlers.prepend("cleanOldRegistrations", function(msg)
-		return "continue"
-	end, function(msg)
-		utils.cleanAnts(tonumber(msg.Timestamp))
 	end)
 end
 

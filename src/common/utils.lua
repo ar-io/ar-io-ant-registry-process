@@ -250,15 +250,13 @@ end
 -- @param {table | nil} params.controllers
 function utils.register(params)
 	assert(type(params) == "table", "Register Params must be a table")
-	local id, timestamp, owner, controllers = params.id, params.timestamp, params.owner, params.controllers
+	local id, owner, controllers = params.id, params.owner, params.controllers
 	assert(type(id) == "string", "ANT ID must be a string")
-	assert(type(timestamp) == "number", "Timestamp must be a number")
 	assert(type(owner) == "string" or owner == nil, "Owner must be a string")
-	assert(type(controllers) == "table" or controllers == nil, "Controllers must be a table")
+	assert(type(controllers) == "table", "Controllers must be a table")
 	ANTS[id] = {
 		Owner = owner,
-		Controllers = controllers or {},
-		RegisteredAt = timestamp,
+		Controllers = controllers,
 	}
 end
 
@@ -316,20 +314,8 @@ function utils.updateAssociations(antId, state)
 	end
 end
 
--- it is possible to register an ANT that does not respond to the state request, so we need to clean up the ANTS table
-function utils.cleanAnts(currentTime)
-	for antId, ant in pairs(ANTS) do
-		if
-			ant.RegisteredAt
-			and not ant.Owner
-			-- We check for both Owner and Controllers to be empty, as it is possible for an ANT to have an Owner (a renounced ant)
-			and not ant.Controllers
-			-- If we don't recieve the state within 30 minutes consider the ANT as invalid
-			and currentTime - ant.RegisteredAt > ANT_REGISTRATION_TTL
-		then
-			ANTS[antId] = nil
-		end
-	end
+function utils.errorHandler(err)
+	return debug.traceback(err)
 end
 
 --[[
@@ -344,10 +330,6 @@ end
 		if the handler function throws an error, send an error message to the sender
 
 	]]
-
-function utils.errorHandler(err)
-	return debug.traceback(err)
-end
 function utils.createActionHandler(action, msgHandler, position)
 	assert(
 		type(position) == "string" or type(position) == "nil",
