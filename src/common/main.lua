@@ -14,12 +14,12 @@ main.init = function()
 	-- Example ANT structure
 	-- ANTS["antId"] = {
 	--     Owner = "userId",
-	--     Controllers = {"userId1", "userId2"},
+	--     Controllers = {"userId1" = true, "userId2" = true},
 	-- }
 	ANTS = ANTS or {}
 
 	-- Example ADDRESSES structure - keyed references to the above ANTS structure
-	-- ADDRESSES["userAddress"] = {["antProcessId1"] = ANTS["antProcessId1"], ANTS["antProcessId2"]}
+	-- ADDRESSES["userAddress"] = {"antProcessId1" = true, "antProcessId2" = true}
 	ADDRESSES = ADDRESSES or {}
 
 	--[[
@@ -71,11 +71,14 @@ main.init = function()
 		assert(type(antId) == "string", "Process-Id tag is required")
 		assert(ANTS[antId] == nil, "ANT is already registered")
 
-		ANTS[antId] = {
-			Owner = nil,
-			Controllers = {},
-		}
-
+		utils.register({
+			id = antId,
+			timestamp = tonumber(msg.Timestamp),
+		})
+		--[[
+			Send a request message for current ANT state to the process. Expect back 
+			a State-Notice so that we can update the registered ANT settings.
+		]]
 		ao.send({
 			Target = antId,
 			Action = "State",
@@ -93,12 +96,12 @@ main.init = function()
 
 		-- Register the ANT if not already registered
 		if not isRegistered then
-			ANTS[msg.From] = {
-				Owner = stateRes.Owner,
-				Controllers = {},
-				-- for cleaning function
-				RegisteredAt = tonumber(msg.Timestamp),
-			}
+			utils.register({
+				id = msg.From,
+				timestamp = tonumber(msg.Timestamp),
+				owner = stateRes.Owner,
+				controllers = stateRes.Controllers,
+			})
 		end
 
 		utils.updateAssociations(msg.From, stateRes)
@@ -117,7 +120,12 @@ main.init = function()
 		local address = msg.Tags["Address"]
 		assert(type(address) == "string", "Address is required")
 
-		local antIds = ADDRESSES[address] or {}
+		local antIds = {}
+		if ADDRESSES[address] then
+			for antId, _ in pairs(ADDRESSES[address]) do
+				table.insert(antIds, antId)
+			end
+		end
 
 		-- Send the list of ant_ids as a JSON array
 		ao.send({

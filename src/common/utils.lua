@@ -242,54 +242,78 @@ function utils.indexOf(t, value)
 	return -1
 end
 
-function utils.updateUserAssociations(antId, state, user)
-	-- remove previous associations
-	if ADDRESSES[user] and user ~= state.Owner and not utils.includes(user, state.Controllers) then
-		local antIndex = utils.indexOf(ADDRESSES[user], antId)
-		if antIndex then
-			table.remove(ADDRESSES[user], antIndex)
-		end
-	end
+--- func description
+-- @param {table} params
+-- @param {string} params.id
+-- @param {number} params.timestamp
+-- @param {string | nil} params.owner
+-- @param {table | nil} params.controllers
+function utils.register(params)
+	assert(type(params) == "table", "Register Params must be a table")
+	local id, timestamp, owner, controllers = params.id, params.timestamp, params.owner, params.controllers
+	assert(type(id) == "string", "ANT ID must be a string")
+	assert(type(timestamp) == "number", "Timestamp must be a number")
+	assert(type(owner) == "string" or owner == nil, "Owner must be a string")
+	assert(type(controllers) == "table" or controllers == nil, "Controllers must be a table")
+	ANTS[id] = {
+		Owner = owner,
+		Controllers = controllers or {},
+		RegisteredAt = timestamp,
+	}
+end
 
-	-- add new associations
-	if user == state.Owner or utils.includes(user, state.Controllers) then
-		if not ADDRESSES[user] then
-			ADDRESSES[user] = {}
-		end
-		if not utils.includes(antId, ADDRESSES[user]) then
-			table.insert(ADDRESSES[user], antId)
-		end
+function utils.controllerTableFromArray(t)
+	assert(type(t) == "table", "argument needs to be a table")
+	local map = {}
+	for _, v in ipairs(t) do
+		map[v] = true
 	end
+	return map
 end
 
 function utils.updateAssociations(antId, state)
 	-- Remove previous associations for old owner and controllers
-	local previousOwner = ANTS[antId].Owner
-	local previousControllers = ANTS[antId].Controllers
+	local oldAnt = ANTS[antId]
 
-	if previousOwner and previousOwner ~= state.Owner and type(ANTS[antId]) == "table" then
-		utils.updateUserAssociations(antId, ANTS[antId], previousOwner)
+	local newOwner = state.Owner or "nilOwner"
+	local newControllers = utils.controllerTableFromArray(state.Controllers)
+
+	local newAffliates = {}
+	newAffliates[newOwner] = true
+	for user, _ in pairs(newControllers) do
+		newAffliates[user] = true
 	end
 
-	for _, user in ipairs(previousControllers) do
-		if not utils.includes(user, state.Controllers) then
-			utils.updateUserAssociations(antId, ANTS[antId], user)
+	if oldAnt ~= nil then
+		local previousOwner = ANTS[antId].Owner or "nilOwner"
+		local previousControllers = ANTS[antId].Controllers
+
+		local oldAffliates = {}
+		oldAffliates[previousOwner] = true
+		for user, _ in pairs(previousControllers) do
+			oldAffliates[user] = true
+		end
+
+		for oldAffliate, _ in pairs(oldAffliates) do
+			if not newAffliates[oldAffliate] and ADDRESSES[oldAffliate] then
+				ADDRESSES[oldAffliate][antId] = nil
+			end
 		end
 	end
 
-	-- Add new associations for new owner and controllers
-	local users = { state.Owner }
-	for _, user in ipairs(state.Controllers) do
-		table.insert(users, user)
+	for user, _ in pairs(newAffliates) do
+		ADDRESSES[user] = ADDRESSES[user] or {}
+		ADDRESSES[user][antId] = true
 	end
-
-	for _, user in ipairs(users) do
-		utils.updateUserAssociations(antId, state, user)
-	end
-
 	-- Update the ANTS table
-	ANTS[antId].Owner = state.Owner
-	ANTS[antId].Controllers = state.Controllers
+	if not newOwner and #newControllers == 0 then
+		ANTS[antId] = nil
+	else -- remove ant from registry if it has no owner or controllers
+		ANTS[antId] = {
+			Owner = newOwner,
+			Controllers = newControllers,
+		}
+	end
 end
 
 -- it is possible to register an ANT that does not respond to the state request, so we need to clean up the ANTS table

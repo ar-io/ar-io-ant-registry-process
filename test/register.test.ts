@@ -68,7 +68,7 @@ describe('ANT Registration Cases', async () => {
     );
 
     // if we have messages in this case we have errors
-    console.log('stateNoticeResult', stateNoticeResult);
+
     assert.strictEqual(stateNoticeResult.Messages.length, 0);
 
     const allAntsResult = await sendMessage(
@@ -197,6 +197,6 @@ describe('ANT Registration Cases', async () => {
     const failureNotice = stateNoticeResult.Messages[0].Tags.find(
       (tag) => tag.name === 'Action',
     );
-    assert.strictEqual(failureNotice.value, 'State-Notice-Failure');
+    assert.strictEqual(failureNotice.value, 'Invalid-State-Notice-Notice');
   });
 });
