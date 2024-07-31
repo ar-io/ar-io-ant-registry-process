@@ -325,11 +325,60 @@ function utils.cleanAnts(currentTime)
 			-- We check for both Owner and Controllers to be empty, as it is possible for an ANT to have an Owner (a renounced ant)
 			and not ant.Controllers
 			-- If we don't recieve the state within 30 minutes consider the ANT as invalid
-			and currentTime - ant.RegisteredAt > 1000 * 60 * 30
+			and currentTime - ant.RegisteredAt > ANT_REGISTRATION_TTL
 		then
 			ANTS[antId] = nil
 		end
 	end
+end
+
+--[[
+		position defaults to "add"
+		
+		Behavior:
+		- "add" - Adds the handler to the end of the list
+		- "prepend" - Adds the handler to the beginning of the list
+		- "append" - Adds the handler to the end of the list
+
+		create a handler by matching an action name to an Action tag on the message
+		if the handler function throws an error, send an error message to the sender
+
+	]]
+
+function utils.errorHandler(err)
+	return debug.traceback(err)
+end
+function utils.createActionHandler(action, msgHandler, position)
+	assert(
+		type(position) == "string" or type(position) == "nil",
+		utils.errorHandler("Position must be a string or nil")
+	)
+	assert(
+		position == nil or position == "add" or position == "prepend" or position == "append",
+		"Position must be one of 'add', 'prepend', 'append'"
+	)
+	return Handlers[position or "add"](
+		utils.camelCase(action),
+		Handlers.utils.hasMatchingTag("Action", action),
+		function(msg)
+			print("Handling Action [" .. msg.Id .. "]: " .. action)
+			local handlerStatus, handlerRes = xpcall(function()
+				msgHandler(msg)
+			end, utils.errorHandler)
+
+			if not handlerStatus then
+				ao.send({
+					Target = msg.From,
+					Action = "Invalid-" .. action .. "-Notice",
+					Error = action .. "-Error",
+					["Message-Id"] = msg.Id,
+					Data = handlerRes,
+				})
+			end
+
+			return handlerRes
+		end
+	)
 end
 
 return utils

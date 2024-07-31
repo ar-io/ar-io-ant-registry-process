@@ -4,9 +4,9 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export const kilobyte = 1024;
-export const megabyte = kilobyte * 1024;
-export const gigabyte = megabyte * 1024;
+export const kibibyte = 1024;
+export const mebibyte = kibibyte * 1024;
+export const gibibyte = mebibyte * 1024;
 export const STUB_ADDRESS = ''.padEnd(43, '1');
 /* ao READ-ONLY Env Variables */
 export const AO_LOADER_HANDLER_ENV = {
@@ -25,7 +25,7 @@ export const AO_LOADER_OPTIONS = {
   format: 'wasm64-unknown-emscripten-draft_2024_02_15',
   inputEncoding: 'JSON-1',
   outputEncoding: 'JSON-1',
-  memoryLimit: gigabyte,
+  memoryLimit: gibibyte,
   computeLimit: (9e12).toString(),
   extensions: [],
 };
