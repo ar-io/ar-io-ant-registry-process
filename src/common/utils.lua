@@ -197,6 +197,7 @@ function utils.reply(msg)
 end
 
 function utils.parseAntState(data)
+	assert(type(data) == "string", "Data must be a string")
 	local decoded = json.decode(data)
 	local balances = decoded.Balances
 	local controllers = decoded.Controllers
@@ -212,7 +213,7 @@ function utils.parseAntState(data)
 	end
 	assert(type(controllers) == "table", "Controllers must be a table")
 	assert(type(records) == "table", "Records must be a table")
-	assert(type(owner) == "string", "Owner must be a string")
+	assert(type(owner) == "string" or type(owner) == nil, "Owner must be a string or nil")
 
 	return decoded
 end
@@ -230,6 +231,81 @@ function utils.camelCase(str)
 	end)
 
 	return str
+end
+
+function utils.indexOf(t, value)
+	for i, v in ipairs(t) do
+		if v == value then
+			return i
+		end
+	end
+	return -1
+end
+
+function utils.updateUserAssociations(antId, state, user)
+	-- remove previous associations
+	if USERS[user] and user ~= state.Owner and not utils.includes(user, state.Controllers) then
+		local antIndex = utils.indexOf(USERS[user], antId)
+		if antIndex then
+			table.remove(USERS[user], antIndex)
+		end
+	end
+
+	-- add new associations
+	if user == state.Owner or utils.includes(user, state.Controllers) then
+		if not USERS[user] then
+			USERS[user] = {}
+		end
+		if not utils.includes(antId, USERS[user]) then
+			table.insert(USERS[user], antId)
+		end
+	end
+end
+
+function utils.updateAssociations(antId, state)
+	-- Remove previous associations for old owner and controllers
+	local previousOwner = ANTS[antId].Owner
+	local previousControllers = ANTS[antId].Controllers
+
+	if previousOwner and previousOwner ~= state.Owner and type(ANTS[antId]) == "table" then
+		utils.updateUserAssociations(antId, ANTS[antId], previousOwner)
+	end
+
+	for _, user in ipairs(previousControllers) do
+		if not utils.includes(user, state.Controllers) then
+			utils.updateUserAssociations(antId, ANTS[antId], user)
+		end
+	end
+
+	-- Add new associations for new owner and controllers
+	local users = { state.Owner }
+	for _, user in ipairs(state.Controllers) do
+		table.insert(users, user)
+	end
+
+	for _, user in ipairs(users) do
+		utils.updateUserAssociations(antId, state, user)
+	end
+
+	-- Update the ANTS table
+	ANTS[antId].Owner = state.Owner
+	ANTS[antId].Controllers = state.Controllers
+end
+
+-- it is possible to register an ANT that does not respond to the state request, so we need to clean up the ANTS table
+function utils.cleanAnts(currentTime)
+	for antId, ant in pairs(ANTS) do
+		if
+			ant.RegisteredAt
+			and not ant.Owner
+			-- We check for both Owner and Controllers to be empty, as it is possible for an ANT to have an Owner (a renounced ant)
+			and not ant.Controllers
+			-- If we don't recieve the state within 30 minutes consider the ANT as invalid
+			and currentTime - ant.RegisteredAt > 1000 * 60 * 30
+		then
+			ANTS[antId] = nil
+		end
+	end
 end
 
 return utils
