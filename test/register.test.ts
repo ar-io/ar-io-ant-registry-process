@@ -6,7 +6,6 @@ import {
   STUB_ADDRESS,
   DEFAULT_HANDLE_OPTIONS,
 } from '../tools/constants.ts';
-import { register } from 'node:module';
 
 describe('ANT Registration Cases', async () => {
   let handle: Function;
@@ -32,20 +31,8 @@ describe('ANT Registration Cases', async () => {
     );
   }
 
-  it('should register an ant', async () => {
+  it('should handle a state notice correctly', async () => {
     const antId = ''.padEnd(43, 'register-test-ant-id');
-    const registerResult = await sendMessage({
-      Tags: [
-        { name: 'Action', value: 'Register' },
-        { name: 'Process-Id', value: antId },
-      ],
-    });
-    console.log(registerResult);
-    const stateAction = registerResult.Messages[0].Tags.find(
-      (tag) => tag.name === 'Action',
-    );
-    assert.strictEqual(stateAction.value, 'State');
-
     // send the state back to the registry as the ANT
     const stateData = JSON.stringify({
       Owner: STUB_ADDRESS,
@@ -56,16 +43,14 @@ describe('ANT Registration Cases', async () => {
       Records: {},
     });
 
-    const stateNoticeResult = await sendMessage(
-      {
-        Tags: [{ name: 'Action', value: 'State-Notice' }],
-        Data: stateData,
-        From: antId,
-        Owner: antId,
-      },
-      registerResult.Memory,
-    );
+    const stateNoticeResult = await sendMessage({
+      Tags: [{ name: 'Action', value: 'State-Notice' }],
+      Data: stateData,
+      From: antId,
+      Owner: antId,
+    });
 
+    console.log(stateNoticeResult);
     // if we have messages in this case we have errors
 
     assert.strictEqual(stateNoticeResult.Messages.length, 0);
@@ -80,43 +65,10 @@ describe('ANT Registration Cases', async () => {
       stateNoticeResult.Memory,
     );
 
-    const ants = JSON.parse(allAntsResult.Messages[0].Data);
-    assert.strictEqual(ants[0], antId);
-  });
+    console.log(allAntsResult);
 
-  it('should clean up dead registrations', async () => {
-    const antId = ''.padEnd(43, 'dead-registration-ant-id');
-    const currentTime = Date.now();
-
-    // Register the ANT
-    await sendMessage({
-      Tags: [
-        { name: 'Action', value: 'Register' },
-        { name: 'Process-Id', value: antId },
-      ],
-      Timestamp: currentTime.toString(),
-    });
-
-    // Simulate a time delay to exceed the cleanup threshold
-    const futureTime = currentTime + 1000 * 60 * 31; // 31 minutes later
-
-    const cleanResult = await sendMessage({
-      Tags: [{ name: 'Action', value: 'Access-Control-List' }],
-      Timestamp: futureTime.toString(),
-    });
-
-    const allAntsResult = await sendMessage(
-      {
-        Tags: [
-          { name: 'Action', value: 'Access-Control-List' },
-          { name: 'Address', value: STUB_ADDRESS },
-        ],
-      },
-      cleanResult.Memory,
-    );
-
-    const ants = JSON.parse(allAntsResult.Messages[0].Data);
-    assert.strictEqual(ants.length, 0);
+    const affiliations = JSON.parse(allAntsResult.Messages[0].Data);
+    assert.strictEqual(affiliations.Owned[0], antId);
   });
 
   it('should handle renounced ANTs', async () => {
@@ -159,8 +111,8 @@ describe('ANT Registration Cases', async () => {
       stateNoticeResult.Memory,
     );
 
-    const ants = JSON.parse(allAntsResult.Messages[0].Data);
-    assert.strictEqual(ants[0], antId);
+    const affiliations = JSON.parse(allAntsResult.Messages[0].Data);
+    assert.strictEqual(affiliations.Owned[0], antId);
   });
 
   it('should handle ANTs with no state', async () => {

@@ -139,20 +139,6 @@ utils.reverse = function(data)
 	end, {}, data)
 end
 
--- @param {function} ...
-utils.compose = utils.curry(function(...)
-	local mutations = utils.reverse({ ... })
-
-	return function(v)
-		local result = v
-		for _, fn in pairs(mutations) do
-			assert(type(fn) == "function", "each argument needs to be a function")
-			result = fn(result)
-		end
-		return result
-	end
-end, 2)
-
 -- @param {string} propName
 -- @param {table} object
 utils.prop = utils.curry(function(propName, object)
@@ -196,26 +182,16 @@ function utils.reply(msg)
 	Handlers.utils.reply(msg)
 end
 
-function utils.parseAntState(data)
-	assert(type(data) == "string", "Data must be a string")
-	local decoded = json.decode(data)
-	local balances = decoded.Balances
-	local controllers = decoded.Controllers
-	local records = decoded.Records
-	local name = decoded.Name
-	local ticker = decoded.Ticker
-	local owner = decoded.Owner
-	assert(type(name) == "string", "Name must be a string")
-	assert(type(ticker) == "string", "Ticker must be a string")
-	assert(type(balances) == "table", "Balances must be a table")
-	for k, v in pairs(balances) do
-		balances[k] = tonumber(v)
-	end
-	assert(type(controllers) == "table", "Controllers must be a table")
-	assert(type(records) == "table", "Records must be a table")
-	assert(type(owner) == "string" or type(owner) == nil, "Owner must be a string or nil")
+function utils.parseAntState(antJsonStr)
+	assert(type(antJsonStr) == "string", "Data must be a string")
+	local decoded = json.decode(antJsonStr)
+	assert(type(decoded.Controllers) == "table", "Controllers must be a table")
+	assert(type(decoded.Owner) == "string" or type(decoded.Owner) == nil, "Owner must be a string or nil")
 
-	return decoded
+	return {
+		Owner = decoded.Owner,
+		Controllers = utils.controllerTableFromArray(decoded.Controllers),
+	}
 end
 
 function utils.camelCase(str)
@@ -251,48 +227,34 @@ function utils.controllerTableFromArray(t)
 	return map
 end
 
-function utils.updateAssociations(antId, state)
-	-- Remove previous associations for old owner and controllers
-	local oldAnt = ANTS[antId] or { Owner = nil, Controllers = {} }
+function utils.updateAffiliations(antId, newAnt, addresses, ants)
+	-- Remove previous affiliations for old owner and controllers
+	local maybeOldAnt = ants[antId]
+	local newAffliates = utils.affiliatesForAnt(newAnt)
 
-	local newOwner = state.Owner or "nilOwner"
-	local newControllers = utils.controllerTableFromArray(state.Controllers)
-
-	local newAffliates = {}
-	newAffliates[newOwner] = true
-	for user, _ in pairs(newControllers) do
-		newAffliates[user] = true
-	end
-
-	if oldAnt ~= nil then
-		local previousOwner = ANTS[antId].Owner or "nilOwner"
-		local previousControllers = ANTS[antId].Controllers
-
-		local oldAffliates = {}
-		oldAffliates[previousOwner] = true
-		for user, _ in pairs(previousControllers) do
-			oldAffliates[user] = true
-		end
-
+	-- Remove stale address affiliations
+	if maybeOldAnt ~= nil then
+		local oldAffliates = utils.affiliatesForAnt(maybeOldAnt)
 		for oldAffliate, _ in pairs(oldAffliates) do
-			if not newAffliates[oldAffliate] and ADDRESSES[oldAffliate] then
-				ADDRESSES[oldAffliate][antId] = nil
+			if not newAffliates[oldAffliate] and addresses[oldAffliate] then
+				addresses[oldAffliate][antId] = nil
 			end
 		end
 	end
 
-	for user, _ in pairs(newAffliates) do
-		ADDRESSES[user] = ADDRESSES[user] or {}
-		ADDRESSES[user][antId] = true
+	-- Create new affiliations
+	for address, _ in pairs(newAffliates) do
+		-- Instantiate the address table if it doesn't exist
+		addresses[address] = addresses[address] or {}
+		-- Finalize the affiliation
+		addresses[address][antId] = true
 	end
-	-- Update the ANTS table
-	if not newOwner and #newControllers == 0 then
-		ANTS[antId] = nil
-	else -- remove ant from registry if it has no owner or controllers
-		ANTS[antId] = {
-			Owner = newOwner,
-			Controllers = newControllers,
-		}
+
+	-- Update the ants table with the newest ANT state
+	if #utils.keys(newAffliates) == 0 then
+		ants[antId] = nil
+	else
+		ants[antId] = newAnt
 	end
 end
 
@@ -343,6 +305,32 @@ function utils.createActionHandler(action, msgHandler, position)
 			return handlerRes
 		end
 	)
+end
+
+function utils.affiliatesForAnt(ant)
+	local affliates = {}
+	if ant.Owner then
+		affliates[ant.Owner] = true
+	end	
+	for address, _ in pairs(ant.Controllers) do
+		affliates[address] = true
+	end
+	return affliates
+end
+
+function utils.affiliationsForAddress(address, ants)
+	local affiliations = {
+		Owned = {},
+		Controlled = {},
+	}
+	for antId, ant in pairs(ants) do
+		if ant.Owner == address then
+			table.insert(affiliations.Owned, antId)
+		elseif ant.Controllers[address] then
+			table.insert(affiliations.Controlled, antId)
+		end
+	end
+	return affiliations
 end
 
 return utils

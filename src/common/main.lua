@@ -5,7 +5,6 @@ local main = {}
 local ao = ao or {}
 
 main.init = function()
-	ANT_REGISTRATION_TTL = 1000 * 60 * 30 -- 30 minutes
 	-- Example ANT structure
 	-- ANTS["antId"] = {
 	--     Owner = "userId",
@@ -13,7 +12,7 @@ main.init = function()
 	-- }
 	ANTS = ANTS or {}
 
-	-- Example ADDRESSES structure - keyed references to the above ANTS structure
+	-- Example ADDRESSES structure - maps a user address to a table keyed on ANT process IDs
 	-- ADDRESSES["userAddress"] = {"antProcessId1" = true, "antProcessId2" = true}
 	ADDRESSES = ADDRESSES or {}
 
@@ -43,29 +42,20 @@ main.init = function()
 	end)
 
 	utils.createActionHandler(ActionMap.StateNotice, function(msg)
-		local stateRes = utils.parseAntState(msg.Data)
-		-- Check if already registered
-
-		utils.updateAssociations(msg.From, stateRes)
+		local ant = utils.parseAntState(msg.Data)
+		utils.updateAffiliations(msg.From, ant, ADDRESSES, ANTS)
 	end)
 
 	utils.createActionHandler(ActionMap.AccessControlList, function(msg)
 		local address = msg.Tags["Address"]
 		assert(type(address) == "string", "Address is required")
 
-		local antIds = {}
-		if ADDRESSES[address] then
-			for antId, _ in pairs(ADDRESSES[address]) do
-				table.insert(antIds, antId)
-			end
-		end
-
-		-- Send the list of ant_ids as a JSON array
+		-- Send the affiliations table
 		ao.send({
 			Target = msg.From,
 			Action = "Access-Control-List-Notice",
 			["Message-Id"] = msg.Id,
-			Data = json.encode(antIds),
+			Data = json.encode(utils.affiliationsForAddress(address, ANTS)),
 		})
 	end)
 end
