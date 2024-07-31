@@ -1,7 +1,7 @@
 # Using aos-sqlite to manage data registered in the ANT Registry Process
 
 - Status: proposed
-- Deciders: [Dylan], [Ariel], [Phil]
+- Approvers: [Dylan], [Ariel], [Phil]
 - Date: 2024-07-22
 - Authors: [Atticus]
 

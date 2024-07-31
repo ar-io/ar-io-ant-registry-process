@@ -1,7 +1,7 @@
 # Provide a "Register" handler in the ANT Registry to provide for permissionless registration of previously undiscovered ANTs
 
 - Status: proposed
-- Deciders: [Dylan], [Ariel], [Phil]
+- Approvers: [Dylan], [Ariel], [Phil]
 - Date: 2024-07-22
 - Authors: [Atticus], [Dylan]
 

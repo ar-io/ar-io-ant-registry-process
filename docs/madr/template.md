@@ -2,7 +2,7 @@
 
 - Status: [proposed | rejected | accepted | deprecated | superseded by
   [ADR-5](5-example.md)]
-- Deciders: [list everyone involved in the decision]
+- Approvers: [list everyone involved in the decision]
 - Date: [YYYY-MM-DD]
 - Authors: [list of authors]
 
@@ -94,8 +94,4 @@ provide additional context or background information.]
 
 ---
 
-[ADR Template]: (https://adr.github.io/)
-[Atticus]: (https://github.com/atticusofsparta)
-[Dylan]: (https://github.com/dtfiedler)
-[Ariel]: (https://github.com/arielmelendez)
-[Phil]: (https://github.com/vilenarios)
+[ADR Template]: https://adr.github.io/

@@ -1,29 +1,27 @@
 # An event driven ANT registration system in AO to optimize ANT listings by access role
 
 - Status: accepted
-- Deciders: [Dylan], [Ariel], [Phil]
+- Approvers: [Dylan], [Ariel], [Phil]
 - Date: 2024-07-22
 - Authors: [Atticus], [Dylan], [Ariel], [Phil]
 
 ## Context and Problem Statement
 
-Listing all ANTs registered to ArNS names and owned by a specific owner or
+Listing all ANTs registered to [ArNS] names and owned by a specific owner or
 owners becomes more computationally expensive as more ArNS names are registered.
-Additionally, its computationally infeasible to find ANTs not registered to an
-ArNS. GraphQL-based approaches cannot currently support either of these
-scenarios.
+Additionally, it is difficult to find ANTs not registered to an registered ArNS
+name using existing ecosystem tools (Graphql, Gateways, ao.link, etc.)
 
-We need to provide owner-based lookups that perform better than O(N).
-
-This is done both on the client side via [AoConnect], or as inter-process
-communication (like in the [ArNS Resolver](#arns-resolver)).
+Ultimately, a permissionless and efficient data store of ANT ownership for
+ArNS-affiliated client applications (e.g., Arconnect, arns.app, BazAR, etc.)
+would improve the discoverability, extensibility, and usability of ANTs.
 
 ### Additional Background
 
-The ArNS AO Process is responsible for recording which ANTs are registered to
-each ArNS name. It does not store or track additional information about the
-owner of the ANT. This reduces the amount of state managed, providing more
-concurrency in the operations in the overall name system's design, (e.g.
+The [IO/AO Network Process] is responsible for recording which ANTs are
+registered to each ArNS name. It does not store or track additional information
+about the owner of the ANT. This reduces the amount of state managed, providing
+more concurrency in the operations in the overall name system's design, (e.g.
 individual ANT's activities do not impact performance of the ArNS Process).
 
 The downside of this separation is that listing all the ANTs for any owner is
@@ -33,6 +31,13 @@ the owner(s) in question - an O(N) operation where N is the total number of
 registered names. An additional downside is that unregistered (from an ArNS
 perspective) ANTs that one owns are not discoverable via this expensive
 algorithm.
+
+### Why we use ANTs
+
+We have ANTs instead of maintaining the metadata of ArNS name on the [IO/AO
+Network Process] so that the permissionless state changes and interactions for
+that metadata is seperated from the interactions and state changes of the [IO/AO
+Network Process] itself.
 
 ## Decision Drivers
 
@@ -53,10 +58,8 @@ The main drivers for this decision revolve around:
 
 ### Dedicated ANT Registry Process
 
-An AO Process that allows for permissionless reporting of the existence of ANTs
-by their Process ID that is capable of asynchronously, by way of AO messaging,
-retrieving, or being notified about, and then caching indexable information
-about ANTs, namely their owners and Controllers.
+A permissionless AO Process that maintains a registry of ANTs and their
+respective ownership information.
 
 - **Pros:**
   - Dedicated registry for ANTs.
@@ -145,11 +148,13 @@ After weighing the pros and cons, it was decided to use an
 
 ---
 
-[AoConnect]: (https://github.com/permaweb/ao/tree/main/connect)
+[AoConnect]: https://github.com/permaweb/ao/tree/main/connect
 [Bazar Profiles]:
-  (https://github.com/permaweb/ao-permaweb/tree/main/services/profiles)
-[ADR Template]: (https://adr.github.io/)
-[Atticus]: (https://github.com/atticusofsparta)
-[Dylan]: (https://github.com/dtfiedler)
-[Ariel]: (https://github.com/arielmelendez)
-[Phil]: (https://github.com/vilenarios)
+  https://github.com/permaweb/ao-permaweb/tree/main/services/profiles
+[ADR Template]: https://adr.github.io/
+[ArNS]: https://docs.ar.io/
+[IO/AO Network Process]: https://github.com/ar-io/ar-io-network-process
+[Atticus]: https://github.com/atticusofsparta
+[Dylan]: https://github.com/dtfiedler
+[Ariel]: https://github.com/arielmelendez
+[Phil]: https://github.com/vilenarios
