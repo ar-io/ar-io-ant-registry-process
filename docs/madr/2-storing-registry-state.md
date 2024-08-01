@@ -1,6 +1,6 @@
 # Storing ANT Registry State in AO Process
 
-- Status: proposed
+- Status: Approved
 - Approvers: [Dylan], [Ariel], [Phil]
 - Date: 2024-07-22
 - Authors: [Atticus]
@@ -37,14 +37,14 @@ The main drivers for this decision are:
 - **Pros:**
   - Known and stable.
   - No need for additional testing or integration.
-  - zero overhead.
+  - Zero overhead of maintaining a third party implementation (e.g. DB schemas)
 - **Cons:**
   - Demonstrated scalability issues when attempting to retrieve 150k records in
     ANT's.
   - Limited performance with larger datasets, namely deeply nested tables.
   - Lack of strictness on data types.
-  - Lots of if-and-or-buts when interacting with them using certain combinations
-    of data types (for example lists are null terminated on some iterators)
+  - Higher potential for developer error due to nuances of high order functions
+    with lua tables
 
 ### Option 2: Use aos-sqlite Module
 
@@ -62,6 +62,8 @@ The main drivers for this decision are:
   - additional overhead in setup
   - lack of tooling to manage migrations
   - lack of tooling around testing
+  - Unable to offer memory efficiency because, being in-memory, does not page to
+    disk.
 
 ## Decision Outcome
 
@@ -80,8 +82,6 @@ following reasons:
 
 ### Positive Consequences
 
-- **Scalability Improvements**: Direct use of Lua tables addresses storage
-  scalability issues.
 - **Resource Efficiency**: More efficient use of in-memory storage by computing
   values rather than storing them.
 

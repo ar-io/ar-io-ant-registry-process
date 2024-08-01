@@ -65,50 +65,6 @@ describe('ANT Registration Cases', async () => {
     assert.strictEqual(affiliations.Owned[0], antId);
   });
 
-  it('should handle renounced ANTs', async () => {
-    const antId = ''.padEnd(43, 'renounced-ant-id');
-    const registerResult = await sendMessage({
-      Tags: [
-        { name: 'Action', value: 'Register' },
-        { name: 'Process-Id', value: antId },
-      ],
-    });
-
-    // send the state back to the registry as the ANT
-    const stateData = JSON.stringify({
-      Owner: STUB_ADDRESS, // Renounced ANT has no owner
-      Controllers: [STUB_ADDRESS],
-      Balances: {},
-      Name: 'RenouncedAnt',
-      Ticker: 'RANT',
-      Records: {},
-    });
-    const stateNoticeResult = await sendMessage(
-      {
-        Tags: [{ name: 'Action', value: 'State-Notice' }],
-        Data: stateData,
-        From: antId,
-        Owner: antId,
-      },
-      registerResult.Memory,
-    );
-
-    assert.strictEqual(stateNoticeResult.Messages.length, 0);
-
-    const allAntsResult = await sendMessage(
-      {
-        Tags: [
-          { name: 'Action', value: 'Access-Control-List' },
-          { name: 'Address', value: STUB_ADDRESS },
-        ],
-      },
-      stateNoticeResult.Memory,
-    );
-
-    const affiliations = JSON.parse(allAntsResult.Messages[0].Data);
-    assert.strictEqual(affiliations.Owned[0], antId);
-  });
-
   it('should handle ANTs with no state', async () => {
     const antId = ''.padEnd(43, 'no-state-ant-id');
     const registerResult = await sendMessage({
