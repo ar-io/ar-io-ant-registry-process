@@ -12,9 +12,11 @@
     "test": "node --test-concurrency 1 --experimental-wasm-memory64 **/*.test.js"
   },
   "devDependencies": {
+    "@ar.io/sdk": "2.1.0-alpha.6",
     "@permaweb/ao-loader": "^0.0.35",
     "@permaweb/aoconnect": "^0.0.56",
     "arweave": "^1.15.1",
     "prettier": "^3.3.2"
-  }
+  },
+  "dependencies": {}
 }

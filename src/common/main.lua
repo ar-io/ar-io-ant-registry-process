@@ -24,12 +24,8 @@ main.init = function()
 
 	utils.createActionHandler(ActionMap.Register, function(msg)
 		local antId = msg.Tags["Process-Id"]
-		assert(type(antId) == "string", "Process-Id tag is required")
+		assert(type(antId) == "string", "Process-Id is required")
 
-		--[[
-			Send a request message for current ANT state to the process. Expect back 
-			a State-Notice so that we can update the registered ANT settings.
-		]]
 		ao.send({
 			Target = antId,
 			Action = "State",
