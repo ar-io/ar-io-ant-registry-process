@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { bundle } from './lua-bundler.ts';
+import { bundle } from './lua-bundler.js';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

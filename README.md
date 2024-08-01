@@ -1,6 +1,20 @@
-# Process on AO
+# ANT Registry
 
-This repository contains the source code to start building on AO and AOS quickly. Includes testing and ci/cd configurations. Testing and building is done in typescript, with the module code designed for eval again AOS-Lua ao modules.
+This repository contains the ANT Registry AO Process tooling and lua source
+code.
+
+## Table of Contents
+
+- [Setup](#setup)
+  - [Install](#install)
+  - [Testing](#testing)
+  - [Building the AOS code](#building-the-aos-code)
+  - [Building the custom module](#building-the-custom-module)
+- [Handler Methods](#handler-methods)
+  - [Register](#register)
+  - [Access-Control-List](#access-control-list)
+- [Developers](#developers)
+- [Additional Resources](#additional-resources)
 
 ## Setup
 
@@ -12,18 +26,21 @@ First install the npm dependencies
 yarn
 ```
 
-Then install the ao cli - read the docs [here](https://github.com/permaweb/ao/tree/main/dev-cli)
-Below is latest version as of writing, refer to the docs for the latest version.
+Then install the ao cli - read the docs
+[here](https://github.com/permaweb/ao/tree/main/dev-cli) Below is latest version
+as of writing, refer to the docs for the latest version.
 
 ```sh
 curl -L https://arweave.net/iVthglhSN7G9LuJSU_h5Wy_lcEa0RE4VQmrtoBMj7Bw | bash
 ```
 
-You may need to follow the instructions in the cli to add the program to your PATH.
+You may need to follow the instructions in the cli to add the program to your
+PATH.
 
 ### Testing
 
-To test the module, you can use the following command to run the testing suites that use AoLoader and node native testing (requires node 20+)
+To test the module, you can use the following command to run the testing suites
+that use AoLoader and node native testing (requires node 20+)
 
 ```sh
 yarn test
@@ -33,7 +50,8 @@ yarn test
 
 #### Build
 
-This bundles the ant-aos code and outputs it to `dist` folder. This can then be used to send to the `Eval` method on AOS to load the ANT source code.
+This bundles the ant-aos code and outputs it to `dist` folder. This can then be
+used to send to the `Eval` method on AOS to load the ANT source code.
 
 ```bash
 yarn aos:build
@@ -49,7 +67,8 @@ yarn aos:publish
 
 #### Load
 
-This will load an AOS module into the loader, followed by the bundled aos Lua file to verify that it is a valid build.
+This will load an AOS module into the loader, followed by the bundled aos Lua
+file to verify that it is a valid build.
 
 ```bash
 yarn aos:load
@@ -63,7 +82,8 @@ this will spawn an aos process and load the bundled lua code into it.
 yarn aos:spawn
 ```
 
-This will deploy the bundled lua file to arweave as an L1 transaction, so your wallet will need AR to pay the gas.
+This will deploy the bundled lua file to arweave as an L1 transaction, so your
+wallet will need AR to pay the gas.
 
 ### Building the custom module
 
@@ -71,7 +91,10 @@ Using the ao-dev-cli.
 
 #### Build
 
-This will compile the standalone ANT module to wasm, as a file named `process.wasm` and loads the module in [AO Loader](https://github.com/permaweb/ao/tree/main/loader) to validate the WASM program is valid.
+This will compile the standalone ANT module to wasm, as a file named
+`process.wasm` and loads the module in
+[AO Loader](https://github.com/permaweb/ao/tree/main/loader) to validate the
+WASM program is valid.
 
 ```bash
 yarn module:build
@@ -79,7 +102,8 @@ yarn module:build
 
 #### Publish
 
-Publishes the custom ANT module to arweave - requires you placed your JWK in the `tools` directory. May require AR in the wallet to pay gas.
+Publishes the custom ANT module to arweave - requires you placed your JWK in the
+`tools` directory. May require AR in the wallet to pay gas.
 
 ```sh
 yarn module:publish
@@ -87,7 +111,8 @@ yarn module:publish
 
 #### Load
 
-Loads the module in [AO Loader](https://github.com/permaweb/ao/tree/main/loader) to validate the WASM program is valid.
+Loads the module in [AO Loader](https://github.com/permaweb/ao/tree/main/loader)
+to validate the WASM program is valid.
 
 ```bash
 yarn module:load
@@ -105,17 +130,51 @@ yarn module:spawn
 
 ## Handler Methods
 
-For interacting with handlers please refer to the [AO Cookbook]
+### Register
 
-### Read Methods
+This handler registers an ANT with the given `Process-Id`. It sends a request
+for the current ANT state and expects a `State-Notice` in response.
 
-#### `Info`
+#### Tags
 
-Retrieves the Name, Ticker, Total supply, Logo, Denomination, and Owner of the ANT.
+| Tag Name   | Type   | Pattern    | Required | Description                       |
+| ---------- | ------ | ---------- | -------- | --------------------------------- |
+| Action     | string | "Register" | true     | Action tag for triggering handler |
+| Process-Id | string | string     | true     | Process id of the ANT to register |
 
-| Tag Name | Type   | Pattern | Required | Description                       |
-| -------- | ------ | ------- | -------- | --------------------------------- |
-| Action   | string | "Info"  | true     | Action tag for triggering handler |
+#### Example
+
+```json
+{
+  "Tags": [
+    { "name": "Action", "value": "Register" },
+    { "name": "Process-Id", "value": "unique-ant-id" }
+  ]
+}
+```
+
+### Access-Control-List
+
+This handler retrieves the list of ANT IDs associated with a given address.
+
+#### Tags
+
+| Tag Name | Type   | Pattern               | Required | Description                       |
+| -------- | ------ | --------------------- | -------- | --------------------------------- |
+| Action   | string | "Access-Control-List" | true     | Action tag for triggering handler |
+| Address  | string | any string            | true     | Address of ANT holder             |
+
+```json
+{
+  "Tags": [
+    { "name": "Action", "value": "Access-Control-List" },
+    {
+      "name": "Address",
+      "value": "FVkQqJh5K9q9Zik4Y5-5dV7nk7waR8v4STuwPnTck1z"
+    }
+  ]
+}
+```
 
 ## Developers
 
@@ -151,7 +210,8 @@ aos --load src/main.lua
 
 ### Code Formatting
 
-The code is formatted using `stylua`. To install `stylua`, run the following command:
+The code is formatted using `stylua`. To install `stylua`, run the following
+command:
 
 ```sh
 cargo install stylua
@@ -165,6 +225,23 @@ To run the tests, execute the following command:
 ```sh
 yarn test
 ```
+
+### Working with AoLoader and WASM
+
+#### Common Errors
+
+##### WebAssembly Memory Limit Error
+
+**Error Message:**
+
+```sh
+RuntimeError: Aborted(CompileError: WebAssembly.instantiate(): maximum memory size (262144 pages) is larger than implementation limit (65536) @+5948)
+    at abort (/Users/atticus/Documents/code/ar-io/ar-io-ant-registry-process/node_modules/@permaweb/ao-loader/dist/index.cjs:12071:19)
+    at /Users/atticus/Documents/code/ar-io/ar-io-ant-registry-process/node_modules/@permaweb/ao-loader/dist/index.cjs:12132:13
+```
+
+**Solution:** Ensure that you are using the appropriate Node.js version. This
+issue was resolved by switching to Node.js version 20.
 
 # Additional Resources
 
