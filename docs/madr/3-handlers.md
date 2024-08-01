@@ -109,7 +109,7 @@ affiliated with the provided process IDs - not in scope.
 
 ---
 
-[Initial ADR]: 1.md
+[Initial ADR]: 1-initial.md
 [ADR Template]: https://adr.github.io/
 [Atticus]: https://github.com/atticusofsparta
 [Dylan]: https://github.com/dtfiedler

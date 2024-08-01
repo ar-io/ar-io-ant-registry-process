@@ -21,13 +21,10 @@ products.
 The main drivers for this decision are:
 
 - **Scalability**
-  - The current method of using tables has scalability issues that SQLite can
-    potentially address.
+  - The storage mechanism should be computation and storage efficient for
+    optimal resource usage and data fetching.
 - **Performance**
-  - Improved performance in handling larger datasets with SQLite.
-- **Risk Management**
-  - Mitigating risks in larger products by testing the module in a controlled
-    environment first.
+  - Fast queries are desired.
 - **Ecosystem Integration**
   - Exploring new modules and their potential benefits within the ao ecosystem.
 - **Maintenance**
@@ -35,7 +32,7 @@ The main drivers for this decision are:
 
 ## Considered Options
 
-### Option 1: Continue Using Existing Tables
+### Option 1: Using Lua Primative Tables
 
 - **Pros:**
   - Known and stable.
@@ -52,19 +49,24 @@ The main drivers for this decision are:
 ### Option 2: Use aos-sqlite Module
 
 - **Pros:**
-  - Addresses _compute_ scalability issues with direct table usage.
-  - Potential for improved performance with larger datasets.
+  - Addresses _compute_ scalability issues with direct table usage due to
+    efficient querying built into sqlite
+  - Potential for improved performance with larger and more complex datasets and
+    schemas
   - Maintained by core team of AO.
   - Additional flexibility in the ways we can store and query for data.
 - **Cons:**
   - New and relatively untested in the aspect of range of applications of it in
     the ecosystem.
   - Higher maintenance of the implementation.
+  - additional overhead in setup
+  - lack of tooling to manage migrations
+  - lack of tooling around testing
 
 ## Decision Outcome
 
-It was decided to **not** use the `aos-sqlite` module despite its initial proof
-of concept functioning. The following reasons led to this decision:
+It was decided to use Lua tables for storing the state of the registry for the
+following reasons:
 
 - **In-Memory Limitation**: Given that in `aos`, everything is in-memory and we
   can't write to disk, we lose out on certain features of SQLite.
@@ -91,10 +93,15 @@ of concept functioning. The following reasons led to this decision:
 
 ## Links
 
-- [AoLoader] https://github.com/permaweb/ao/tree/main/loader
-- [aos-sqlite Module Documentation] https://github.com/permaweb/aos-sqlite
-- [ADR Template] https://adr.github.io/
-- [Atticus] https://github.com/atticusofsparta
-- [Dylan] https://github.com/dtfiedler
-- [Ariel] https://github.com/arielmelendez
-- [Phil] https://github.com/vilenarios
+- [AoLoader]
+- [aos-sqlite Module Documentation]
+
+---
+
+[AoLoader]: https://github.com/permaweb/ao/tree/main/loader
+[aos-sqlite Module Documentation]: https://github.com/permaweb/aos-sqlite
+[ADR Template]: https://adr.github.io/
+[Atticus]: https://github.com/atticusofsparta
+[Dylan]: https://github.com/dtfiedler
+[Ariel]: https://github.com/arielmelendez
+[Phil]: https://github.com/vilenarios
