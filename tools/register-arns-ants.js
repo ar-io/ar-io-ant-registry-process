@@ -19,13 +19,15 @@ async function main() {
 
   for (const antId of [...processIds]) {
     console.log(`Registering ${count++}/${processIds.size}...`);
-    await registry.send({
-      tags: [
-        { name: 'Action', value: 'Register' },
-        { name: 'Process-Id', value: antId },
-      ],
-      signer,
-    });
+    await registry
+      .send({
+        tags: [
+          { name: 'Action', value: 'Register' },
+          { name: 'Process-Id', value: antId },
+        ],
+        signer,
+      })
+      .catch((e) => console.error(e));
   }
 }
 
