@@ -78,8 +78,7 @@ the `State-Notice` handler can still accept state to include the ANT.
 
 - **Permission:** Permissionless
 - **Function:** Requires a Process-Id and sends a State message to the process
-  ID. Responds with a Register-Notice to the caller if the process ID is valid.
-  Returns Register-Notice-Failure if the process ID is invalid.
+  ID. Returns Register-Notice-Failure if the process ID is invalid.
 - **Notes:**
   - ANTs can call this themselves on initialization (or through the SDK after
     the process is created) - not in scope.
@@ -102,11 +101,6 @@ affiliated with the provided process IDs - not in scope.
 - Initial development and integration effort.
 - Future maintenance of additional handlers and updates to the ANT source code.
 
-### Implementation Recommendations
-
-- Use two indexes for process IDs and wallet addresses to ensure lookups are
-  O(n).
-
 ### Links
 
 ---
@@ -115,9 +109,9 @@ affiliated with the provided process IDs - not in scope.
 
 ---
 
-[Initial ADR]: (1.md)
-[ADR Template]: (https://adr.github.io/)
-[Atticus]: (https://github.com/atticusofsparta)
-[Dylan]: (https://github.com/dtfiedler)
-[Ariel]: (https://github.com/arielmelendez)
-[Phil]: (https://github.com/vilenarios)
+[Initial ADR]: 1.md
+[ADR Template]: https://adr.github.io/
+[Atticus]: https://github.com/atticusofsparta
+[Dylan]: https://github.com/dtfiedler
+[Ariel]: https://github.com/arielmelendez
+[Phil]: https://github.com/vilenarios

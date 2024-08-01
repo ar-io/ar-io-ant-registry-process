@@ -1,4 +1,4 @@
-# Using aos-sqlite to manage data registered in the ANT Registry Process
+# Storing ANT Registry State in AO Process
 
 - Status: proposed
 - Approvers: [Dylan], [Ariel], [Phil]
@@ -7,15 +7,14 @@
 
 ## Context and Problem Statement
 
-The `aos-sqlite` module, is a WebAssembly (Wasm) binary in the Arweave (ao)
-ecosystem, and extends the standard `aos` Wasm module. The `aos` module includes
-an `Eval` handler that executes Lua strings using the `load` method of the
-stdlib in Lua. The `aos-sqlite` module, compiled with `lua-sqlite3` from C to
-Wasm, adds SQLite functionality.
+There are multiple options for storing state in ao Lua processes, namely thru
+the use of the Lua `table` primitive, and a special build called aos-sqlite
+which exposes the lua-sqlite3 library for using in-memory databases.
 
-Directly using Lua tables has shown a need for better tooling in manipulating
-and searching data, making the SQLite implementation a potential solution.
-However, its novelty raises concerns about reliability in larger products.
+Directly using Lua tables for complex data has shown a need for better tooling
+in manipulating and searching data, making the SQLite implementation a potential
+solution. However, its novelty raises concerns about reliability in larger
+products.
 
 ## Decision Drivers
 
@@ -31,6 +30,8 @@ The main drivers for this decision are:
     environment first.
 - **Ecosystem Integration**
   - Exploring new modules and their potential benefits within the ao ecosystem.
+- **Maintenance**
+  - How many development cycles will be needed to maintain the solution.
 
 ## Considered Options
 
@@ -39,60 +40,61 @@ The main drivers for this decision are:
 - **Pros:**
   - Known and stable.
   - No need for additional testing or integration.
+  - Smaller storage requirement than sqlite
 - **Cons:**
   - Demonstrated scalability issues when attempting to retrieve 150k records in
     ANT's.
-  - Limited performance with larger datasets.
+  - Limited performance with larger datasets, namely deeply nested tables.
   - Lack of strictness on data types.
+  - Lots of if-and-or-buts when interacting with them using certain combinations
+    of data types (for example lists are null terminated on some iterators)
 
 ### Option 2: Use aos-sqlite Module
 
 - **Pros:**
-  - Addresses scalability issues with direct table usage.
+  - Addresses _compute_ scalability issues with direct table usage.
   - Potential for improved performance with larger datasets.
-  - Maintained by core team of AO
-  - Additional flexibility in the ways we can store and query for data
+  - Maintained by core team of AO.
+  - Additional flexibility in the ways we can store and query for data.
 - **Cons:**
-  - New and relatively untested in the ecosystem.
-  - Potential stability issues in larger products.
+  - New and relatively untested in the aspect of range of applications of it in
+    the ecosystem.
+  - Higher maintenance of the implementation.
 
 ## Decision Outcome
 
-It was decided to use the `aos-sqlite` module to address scalability issues in
-the controlled environment of the ANT Registry, since it stands apart from other
-mission critical products. This approach allows us to test its effectiveness and
-performance before considering wider adoption in larger products.
+It was decided to **not** use the `aos-sqlite` module despite its initial proof
+of concept functioning. The following reasons led to this decision:
+
+- **In-Memory Limitation**: Given that in `aos`, everything is in-memory and we
+  can't write to disk, we lose out on certain features of SQLite.
+- **Overhead**: While SQLite provides some useful tooling, it introduces
+  significant overhead. A simple data structure with Lua table primitives can
+  implement the same state management with less complexity.
+- **Storage vs. Compute**: SQLite bloats the size of the data in an effort to
+  reduce the compute for accessing data. In `aos`, being in-memory, storage is
+  at a premium, so computing values is preferred over storing them (to an
+  extent).
 
 ### Positive Consequences
 
-- **Scalability Improvements:** Potential solution to scalability issues with
-  direct table usage.
-- **Performance Benefits:** Improved performance handling larger datasets.
-- **Future Integration:** Provides insights into the module's potential for
-  wider adoption.
+- **Scalability Improvements**: Direct use of Lua tables addresses storage
+  scalability issues.
+- **Resource Efficiency**: More efficient use of in-memory storage by computing
+  values rather than storing them.
 
 ### Negative Consequences
 
-- **Stability Concerns:** New module with potential stability issues in larger
-  products.
-- **Testing Effort:** Requires additional testing and monitoring to ensure
-  reliability.
-
-## Implementation Recommendations
-
-- **Testing Framework:** Use a testing framework to evaluate the module's
-  scalability and performance. ( eg with [AoLoader])
-- **Monitoring:** Implement monitoring tools like grafana to track the module's
-  performance, stability, and resource usage.
+- **Tooling Limitations**: Loss of some tooling that SQLite offers for data
+  manipulation and querying (though again we don't need much of that tooling in
+  the first place)
 
 ## Links
 
-- [AOS-SQLITE][aos-sqlite Module Documentation]
-
-[AoLoader]: (https://github.com/permaweb/ao/tree/main/loader)
-[aos-sqlite Module Documentation]: (https://github.com/permaweb/aos-sqlite)
-[ADR Template]: (https://adr.github.io/)
-[Atticus]: (https://github.com/atticusofsparta)
-[Dylan]: (https://github.com/dtfiedler)
-[Ariel]: (https://github.com/arielmelendez)
-[Phil]: (https://github.com/vilenarios)
+- [AoLoader] https://github.com/permaweb/ao/tree/main/loader
+- [aos-sqlite Module Documentation] https://github.com/permaweb/aos-sqlite
+- [ADR Template] https://adr.github.io/
+- [Atticus] https://github.com/atticusofsparta
+- [Dylan] https://github.com/dtfiedler
+- [Ariel] https://github.com/arielmelendez
+- [Phil] https://github.com/vilenarios
