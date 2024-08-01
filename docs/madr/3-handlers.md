@@ -64,7 +64,7 @@ was necessary at all. The names were decided based on the ANT contracts
 - **Cons:**
   - Increased complexity in management.
   - Unable to index ANT's without the ANT itself sending the state to the
-    registry, which could be added as a handler to ants, but uneccesary.
+    registry, which could be added as a handler to ants, but unnecessary.
 
 ## Decision Outcome
 

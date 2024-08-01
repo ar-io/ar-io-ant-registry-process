@@ -36,7 +36,7 @@ algorithm.
 
 We have ANTs instead of maintaining the metadata of ArNS name on the [IO/AO
 Network Process] so that the permissionless state changes and interactions for
-that metadata is seperated from the interactions and state changes of the [IO/AO
+that metadata is separated from the interactions and state changes of the [IO/AO
 Network Process] itself.
 
 ## Decision Drivers

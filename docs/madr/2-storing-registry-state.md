@@ -32,7 +32,7 @@ The main drivers for this decision are:
 
 ## Considered Options
 
-### Option 1: Using Lua Primative Tables
+### Option 1: Using Lua Primitive Tables
 
 - **Pros:**
   - Known and stable.
