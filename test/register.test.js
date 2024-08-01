@@ -47,7 +47,6 @@ describe('ANT Registration Cases', async () => {
       Owner: antId,
     });
 
-    console.log(stateNoticeResult);
     // if we have messages in this case we have errors
 
     assert.strictEqual(stateNoticeResult.Messages.length, 0);
@@ -61,8 +60,6 @@ describe('ANT Registration Cases', async () => {
       },
       stateNoticeResult.Memory,
     );
-
-    console.log(allAntsResult);
 
     const affiliations = JSON.parse(allAntsResult.Messages[0].Data);
     assert.strictEqual(affiliations.Owned[0], antId);
