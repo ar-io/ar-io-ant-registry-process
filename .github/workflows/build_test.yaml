@@ -1,9 +1,10 @@
 name: Build and Test
 
-on: [push, workflow_dispatch]
+on: [pull_request]
 
 jobs:
-  build_and_test:
+  # TODO: add unit tests using bused
+  integration:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
