@@ -1,7 +1,7 @@
 import { IO, AOProcess, ArweaveSigner, createAoSigner } from '@ar.io/sdk';
 import Arweave from 'arweave';
 
-const registryId = '6_b3wHAtM4WLUyrVJmfCPocRY3glayaEqZz8YqumcWQ';
+const registryId = 'CKcXPRsQCsmNf6Wnx0njnlf2upecRyk35d8LWGk85AQ';
 
 async function main() {
   const arweave = Arweave.init();
@@ -12,12 +12,13 @@ async function main() {
     limit: 50_000,
   });
   const antIds = arnsRecords.items.map((record) => record.processId);
+  const processIds = new Set(antIds);
 
   const registry = new AOProcess({ processId: registryId });
   let count = 0;
 
-  for (const antId of antIds) {
-    console.log(`Registering ${count++}/${antIds.length}...`);
+  for (const antId of [...processIds]) {
+    console.log(`Registering ${count++}/${processIds.size}...`);
     await registry.send({
       tags: [
         { name: 'Action', value: 'Register' },
@@ -25,7 +26,6 @@ async function main() {
       ],
       signer,
     });
-    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 }
 
