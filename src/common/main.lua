@@ -16,9 +16,6 @@ main.init = function()
 	-- ADDRESSES["userAddress"] = {"antProcessId1" = true, "antProcessId2" = true}
 	ADDRESSES = ADDRESSES or {}
 
-	REQUESTED_ANTS = REQUESTED_ANTS or {}
-	ANTS_WAITING_RESPONSE = ANTS_WAITING_RESPONSE or {}
-
 	local ActionMap = {
 		Register = "Register",
 		StateNotice = "State-Notice",
@@ -28,9 +25,6 @@ main.init = function()
 	utils.createActionHandler(ActionMap.Register, function(msg)
 		local antId = msg.Tags["Process-Id"]
 		assert(type(antId) == "string", "Process-Id is required")
-
-		REQUESTED_ANTS[antId] = true
-		ANTS_WAITING_RESPONSE[antId] = true
 
 		ao.send({
 			Target = antId,
@@ -44,7 +38,6 @@ main.init = function()
 	end)
 
 	utils.createActionHandler(ActionMap.StateNotice, function(msg)
-		ANTS_WAITING_RESPONSE[msg.From] = nil
 		local ant = utils.parseAntState(msg.Data)
 		utils.updateAffiliations(msg.From, ant, ADDRESSES, ANTS)
 	end)
