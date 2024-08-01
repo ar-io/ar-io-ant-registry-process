@@ -37,7 +37,7 @@ The main drivers for this decision are:
 - **Pros:**
   - Known and stable.
   - No need for additional testing or integration.
-  - Smaller storage requirement than sqlite
+  - zero overhead.
 - **Cons:**
   - Demonstrated scalability issues when attempting to retrieve 150k records in
     ANT's.
