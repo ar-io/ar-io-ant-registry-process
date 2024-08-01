@@ -16,5 +16,8 @@
     "@permaweb/aoconnect": "^0.0.56",
     "arweave": "^1.15.1",
     "prettier": "^3.3.2"
+  },
+  "dependencies": {
+    "@ar.io/sdk": "2.1.0-alpha.6"
   }
 }
