@@ -5,7 +5,7 @@ import {
   AO_LOADER_OPTIONS,
   BUNDLED_AOS_LUA,
   DEFAULT_HANDLE_OPTIONS,
-} from '../tools/constants.ts';
+} from '../tools/constants.js';
 
 /**
  * Loads the aos wasm binary and returns the handle function with program memory

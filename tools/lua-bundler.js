@@ -15,7 +15,7 @@ import path from 'path';
 function createExecutableFromProject(project) {
   const getModFnName = (name) => name.replace(/\./g, '_').replace(/^_/, '');
   /** @type {Module[]} */
-  const contents: any[] = [];
+  const contents = [];
 
   // filter out repeated modules with different import names
   // and construct the executable Lua code
@@ -23,7 +23,7 @@ function createExecutableFromProject(project) {
   for (let i = 0; i < project.length - 1; i++) {
     const mod = project[i];
 
-    const existing = contents.find((m: any) => m.path === mod.path);
+    const existing = contents.find((m) => m.path === mod.path);
     const moduleContent =
       (!existing &&
         `-- module: "${mod.name}"\nlocal function _loaded_mod_${getModFnName(mod.name)}()\n${mod.content}\nend\n`) ||
@@ -51,15 +51,15 @@ function createExecutableFromProject(project) {
  * @return {Module[]}
  */
 function createProjectStructure(mainFile) {
-  const sorted: any[] = [];
+  const sorted = [];
   const cwd = path.dirname(mainFile);
 
   // checks if the sorted module list already includes a node
-  const isSorted = (node: any) =>
-    sorted.find((sortedNode: any) => sortedNode.path === node.path);
+  const isSorted = (node) =>
+    sorted.find((sortedNode) => sortedNode.path === node.path);
 
   // recursive dfs algorithm
-  function dfs(currentNode: any) {
+  function dfs(currentNode) {
     const unvisitedChildNodes = exploreNodes(currentNode, cwd).filter(
       (node) => !isSorted(node),
     );
@@ -78,7 +78,7 @@ function createProjectStructure(mainFile) {
     // modules that were not read don't exist locally
     // aos assumes that these modules have already been
     // loaded into the process, or they're default modules
-    (mod: any) => mod.content !== undefined,
+    (mod) => mod.content !== undefined,
   );
 }
 

@@ -5,11 +5,11 @@ import {
   AO_LOADER_HANDLER_ENV,
   STUB_ADDRESS,
   DEFAULT_HANDLE_OPTIONS,
-} from '../tools/constants.ts';
+} from '../tools/constants.js';
 
 describe('ANT Registration Cases', async () => {
-  let handle: Function;
-  let startMemory: WebAssembly.Memory;
+  let handle;
+  let startMemory;
 
   before(async () => {
     const loader = await createAntAosLoader();
@@ -17,10 +17,7 @@ describe('ANT Registration Cases', async () => {
     startMemory = loader.memory;
   });
 
-  async function sendMessage(
-    options: Record<string, any> = {},
-    mem = startMemory,
-  ) {
+  async function sendMessage(options = {}, mem = startMemory) {
     return handle(
       mem,
       {

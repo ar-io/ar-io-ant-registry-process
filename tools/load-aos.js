@@ -5,7 +5,7 @@ import {
   AO_LOADER_OPTIONS,
   AO_LOADER_HANDLER_ENV,
   DEFAULT_HANDLE_OPTIONS,
-} from './constants.ts';
+} from './constants.js';
 
 async function main() {
   const testCases = [['Eval', { Module: ''.padEnd(43, '1') }, BUNDLED_AOS_LUA]];

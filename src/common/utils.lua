@@ -311,7 +311,7 @@ function utils.affiliatesForAnt(ant)
 	local affliates = {}
 	if ant.Owner then
 		affliates[ant.Owner] = true
-	end	
+	end
 	for address, _ in pairs(ant.Controllers) do
 		affliates[address] = true
 	end
