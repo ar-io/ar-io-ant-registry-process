@@ -1,11 +1,11 @@
 import assert from 'node:assert';
 import { describe, it } from 'node:test';
-import { createAntAosLoader } from './utils.ts';
+import { createAntAosLoader } from './utils.js';
 import {
   AO_LOADER_HANDLER_ENV,
   STUB_ADDRESS,
   DEFAULT_HANDLE_OPTIONS,
-} from '../tools/constants.ts';
+} from '../tools/constants.jd';
 
 describe('aos', async () => {
   const { handle: originalHandle, memory: startMemory } =
