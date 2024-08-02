@@ -43,16 +43,16 @@ The main drivers for this decision revolve around:
 
 ## Considered Options
 
-The `State-Notice` and `Access-Control-List` handlers are required for storing
-the ANT owner, however the `Register` handler was discussed deeply to see if it
-was necessary at all. The names were decided based on the ANT contracts
+The State-Notice and Access-Control-List handlers are required for storing the
+ANT owner; however, the Register handler was discussed deeply to see if it was
+necessary at all.
 
 ### With Register
 
 - **Pros:**
   - Allows triggering other workflows by notifying the ANT with a
     `Register-Notice`
-  - Can Register ANT's from other workflow without the ANT registering itself.
+  - Can Register ANTs from other workflow without the ANT registering itself.
 - **Cons:**
   - Increased complexity in management.
   - Higher initial development effort.
@@ -63,14 +63,14 @@ was necessary at all. The names were decided based on the ANT contracts
   - Less complex
 - **Cons:**
   - Increased complexity in management.
-  - Unable to index ANT's without the ANT itself sending the state to the
+  - Unable to index ANTs without the ANT itself sending the state to the
     registry, which could be added as a handler to ants, but unnecessary.
 
 ## Decision Outcome
 
-It was decided to proceed with the `Register` handler with the caveat that it is
-not necessarily required for ANT's to add their state to the registry and that
-the `State-Notice` handler can still accept state to include the ANT.
+It was decided to proceed with the Register handler with the caveat that it is
+not necessarily required for ANTs to add their state to the registry and that
+the State-Notice handler can still accept state to include the ANT.
 
 ### Initial Process Handlers
 

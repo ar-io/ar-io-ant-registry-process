@@ -40,7 +40,7 @@ The main drivers for this decision are:
   - Zero overhead of maintaining a third party implementation (e.g. DB schemas)
 - **Cons:**
   - Demonstrated scalability issues when attempting to retrieve 150k records in
-    ANT's.
+    ANTs.
   - Limited performance with larger datasets, namely deeply nested tables.
   - Lack of strictness on data types.
   - Higher potential for developer error due to nuances of high order functions
