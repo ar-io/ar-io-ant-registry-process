@@ -5,14 +5,11 @@ const registryId = process.env.REGISTRY_ID;
 const wallet = JSON.parse(process.env.WALLET);
 const process = new AOProcess({ processId: registryId });
 
-async function main() {
-  const signer = createAoSigner(new ArweaveSigner(wallet));
+const signer = createAoSigner(new ArweaveSigner(wallet));
 
-  const evolveResult = await process.send({
-    tags: [{ name: 'Action', value: 'Eval' }],
-    data: BUNDLED_AOS_LUA,
-    signer,
-  });
-  console.log(`Evolve result: ${evolveResult}`);
-}
-main();
+const evolveResult = await process.send({
+  tags: [{ name: 'Action', value: 'Eval' }],
+  data: BUNDLED_AOS_LUA,
+  signer,
+});
+console.log(`Evolve result: ${evolveResult}`);
