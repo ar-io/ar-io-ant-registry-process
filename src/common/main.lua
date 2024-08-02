@@ -1,19 +1,57 @@
 local json = require(".common.json")
+local utils = require(".common.utils")
 local main = {}
+-- just to ignore lint warnings
+local ao = ao or {}
 
 main.init = function()
-	Owner = Owner or ao.env.Process.Owner
-	Name = Name or "INSERT_NAME_HERE"
+	-- Example ANT structure
+	-- ANTS["antId"] = {
+	--     Owner = "userId",
+	--     Controllers = {"userId1" = true, "userId2" = true},
+	-- }
+	ANTS = ANTS or {}
 
-	Handlers.add("info", Handlers.utils.hasMatchingTag("Action", "Info"), function(msg)
+	-- Example ADDRESSES structure - maps a user address to a table keyed on ANT process IDs
+	-- ADDRESSES["userAddress"] = {"antProcessId1" = true, "antProcessId2" = true}
+	ADDRESSES = ADDRESSES or {}
+
+	local ActionMap = {
+		Register = "Register",
+		StateNotice = "State-Notice",
+		AccessControlList = "Access-Control-List",
+	}
+
+	utils.createActionHandler(ActionMap.Register, function(msg)
+		local antId = msg.Tags["Process-Id"]
+		assert(type(antId) == "string", "Process-Id is required")
+
+		ao.send({
+			Target = antId,
+			Action = "State",
+		})
 		ao.send({
 			Target = msg.From,
-			Name = Name,
-			Owner = Owner,
-			Data = json.encode({
-				Name = Name,
-				Owner = Owner,
-			}),
+			Action = "Register-Notice",
+			["Message-Id"] = msg.Id,
+		})
+	end)
+
+	utils.createActionHandler(ActionMap.StateNotice, function(msg)
+		local ant = utils.parseAntState(msg.Data)
+		utils.updateAffiliations(msg.From, ant, ADDRESSES, ANTS)
+	end)
+
+	utils.createActionHandler(ActionMap.AccessControlList, function(msg)
+		local address = msg.Tags["Address"]
+		assert(type(address) == "string", "Address is required")
+
+		-- Send the affiliations table
+		ao.send({
+			Target = msg.From,
+			Action = "Access-Control-List-Notice",
+			["Message-Id"] = msg.Id,
+			Data = json.encode(utils.affiliationsForAddress(address, ANTS)),
 		})
 	end)
 end
