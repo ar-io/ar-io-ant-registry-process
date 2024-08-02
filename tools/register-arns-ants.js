@@ -1,7 +1,7 @@
 import { IO, AOProcess, ArweaveSigner, createAoSigner } from '@ar.io/sdk';
 import Arweave from 'arweave';
 
-const registryId = 'CKcXPRsQCsmNf6Wnx0njnlf2upecRyk35d8LWGk85AQ';
+const registryId = 'i_le_yKKPVstLTDSmkHRqf-wYphMnwB9OhleiTgMkWc';
 
 async function main() {
   const arweave = Arweave.init();
