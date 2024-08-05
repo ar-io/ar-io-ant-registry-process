@@ -1,6 +1,6 @@
 name: Build and Test
 
-on: [pull_request, push]
+on: [push]
 
 jobs:
   # TODO: add unit tests using bused
@@ -19,7 +19,7 @@ jobs:
   evolve:
     # Run on main branch only
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main'
     needs: integration
     steps:
       - uses: actions/checkout@v4
