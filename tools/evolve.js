@@ -1,5 +1,6 @@
 import { AOProcess, createAoSigner, ArweaveSigner } from '@ar.io/sdk';
 import { BUNDLED_AOS_LUA } from './constants.js';
+import process from 'process';
 
 const registryId = process.env.REGISTRY_ID;
 const wallet = JSON.parse(process.env.WALLET);
