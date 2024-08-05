@@ -1,0 +1,34 @@
+name: Build and Test
+
+on: [pull_request, push]
+
+jobs:
+  # TODO: add unit tests using bused
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4.0.2
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - run: yarn --frozen-lockfile
+      - run: yarn aos:build
+      - run: yarn test
+  evolve:
+    # Run on main branch only
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: integration
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4.0.2
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+      - run: yarn --frozen-lockfile
+      - run: yarn evolve
+        env:
+          WALLET: ${{ secrets.WALLET }}
+          REGISTRY_ID: ${{ secrets.REGISTRY_ID }}
