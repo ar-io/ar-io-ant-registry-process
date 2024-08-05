@@ -19,7 +19,8 @@ jobs:
   evolve:
     # Run on main branch only
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    # TODO: re-enable after testing workflow
+    # if: github.ref == 'refs/heads/main'
     needs: integration
     steps:
       - uses: actions/checkout@v4
