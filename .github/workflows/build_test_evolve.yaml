@@ -22,7 +22,6 @@ jobs:
     # TODO: re-enable after testing workflow
     # if: github.ref == 'refs/heads/main'
     needs: integration
-    environment: development
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4.0.2
@@ -33,4 +32,4 @@ jobs:
       - run: yarn evolve
         env:
           WALLET: ${{ secrets.WALLET }}
-          REGISTRY_ID: ${{ secrets.REGISTRY_ID }}
+          REGISTRY_ID: ${{ vars.REGISTRY_ID }}
