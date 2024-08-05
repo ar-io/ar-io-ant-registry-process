@@ -34,6 +34,7 @@ main.init = function()
 			Target = msg.From,
 			Action = "Register-Notice",
 			["Message-Id"] = msg.Id,
+			Data = "Registering ANT: " .. antId,
 		})
 	end)
 
