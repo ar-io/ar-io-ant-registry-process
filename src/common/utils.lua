@@ -1,6 +1,6 @@
 -- the majority of this file came from https://github.com/permaweb/aos/blob/main/process/utils.lua
 
-local constants = require(".common.constants")
+local json = require(".common.json")
 local utils = { _version = "0.0.1" }
 
 local function isArray(table)
@@ -139,20 +139,6 @@ utils.reverse = function(data)
 	end, {}, data)
 end
 
--- @param {function} ...
-utils.compose = utils.curry(function(...)
-	local mutations = utils.reverse({ ... })
-
-	return function(v)
-		local result = v
-		for _, fn in pairs(mutations) do
-			assert(type(fn) == "function", "each argument needs to be a function")
-			result = fn(result)
-		end
-		return result
-	end
-end, 2)
-
 -- @param {string} propName
 -- @param {table} object
 utils.prop = utils.curry(function(propName, object)
@@ -196,34 +182,16 @@ function utils.reply(msg)
 	Handlers.utils.reply(msg)
 end
 
-function utils.validateArweaveId(id)
-	local valid = string.match(id, constants.ARWEAVE_ID_REGEXP) == nil
+function utils.parseAntState(antJsonStr)
+	assert(type(antJsonStr) == "string", "Data must be a string")
+	local decoded = json.decode(antJsonStr)
+	assert(type(decoded.Controllers) == "table", "Controllers must be a table")
+	assert(type(decoded.Owner) == "string" or type(decoded.Owner) == nil, "Owner must be a string or nil")
 
-	assert(valid == true, constants.INVALID_ARWEAVE_ID_MESSAGE)
-end
-
-function utils.validateOwner(caller)
-	local isOwner = false
-	if Owner == caller or Balances[caller] or ao.env.Process.Id == caller then
-		isOwner = true
-	end
-	assert(isOwner, "Sender is not the owner.")
-end
-
-function utils.assertHasPermission(from)
-	for _, c in ipairs(Controllers) do
-		if c == from then
-			-- if is controller, return true
-			return
-		end
-	end
-	if Owner == from then
-		return
-	end
-	if ao.env.Process.Id == from then
-		return
-	end
-	assert(false, "Only controllers and owners can set controllers, records, and change metadata.")
+	return {
+		Owner = decoded.Owner,
+		Controllers = utils.controllerTableFromArray(decoded.Controllers),
+	}
 end
 
 function utils.camelCase(str)
@@ -241,48 +209,128 @@ function utils.camelCase(str)
 	return str
 end
 
-utils.notices = {}
+function utils.indexOf(t, value)
+	for i, v in ipairs(t) do
+		if v == value then
+			return i
+		end
+	end
+	return -1
+end
 
-function utils.notices.credit(msg)
-	local notice = {
-		Target = msg.From,
-		Action = "Credit-Notice",
-		Recipient = msg.Recipient,
-		Quantity = tostring(1),
-	}
-	for tagName, tagValue in pairs(msg) do
-		-- Tags beginning with "X-" are forwarded
-		if string.sub(tagName, 1, 2) == "X-" then
-			notice[tagName] = tagValue
+function utils.controllerTableFromArray(t)
+	assert(type(t) == "table", "argument needs to be a table")
+	local map = {}
+	for _, v in ipairs(t) do
+		map[v] = true
+	end
+	return map
+end
+
+function utils.updateAffiliations(antId, newAnt, addresses, ants)
+	-- Remove previous affiliations for old owner and controllers
+	local maybeOldAnt = ants[antId]
+	local newAffliates = utils.affiliatesForAnt(newAnt)
+
+	-- Remove stale address affiliations
+	if maybeOldAnt ~= nil then
+		local oldAffliates = utils.affiliatesForAnt(maybeOldAnt)
+		for oldAffliate, _ in pairs(oldAffliates) do
+			if not newAffliates[oldAffliate] and addresses[oldAffliate] then
+				addresses[oldAffliate][antId] = nil
+			end
 		end
 	end
 
-	return notice
+	-- Create new affiliations
+	for address, _ in pairs(newAffliates) do
+		-- Instantiate the address table if it doesn't exist
+		addresses[address] = addresses[address] or {}
+		-- Finalize the affiliation
+		addresses[address][antId] = true
+	end
+
+	-- Update the ants table with the newest ANT state
+	if #utils.keys(newAffliates) == 0 then
+		ants[antId] = nil
+	else
+		ants[antId] = newAnt
+	end
 end
 
-function utils.notices.debit(msg)
-	local notice = {
-		Target = msg.From,
-		Action = "Debit-Notice",
-		Recipient = msg.Recipient,
-		Quantity = tostring(1),
+function utils.errorHandler(err)
+	return debug.traceback(err)
+end
+
+--[[
+		position defaults to "add"
+		
+		Behavior:
+		- "add" - Adds the handler to the end of the list
+		- "prepend" - Adds the handler to the beginning of the list
+		- "append" - Adds the handler to the end of the list
+
+		create a handler by matching an action name to an Action tag on the message
+		if the handler function throws an error, send an error message to the sender
+
+	]]
+function utils.createActionHandler(action, msgHandler, position)
+	assert(
+		type(position) == "string" or type(position) == "nil",
+		utils.errorHandler("Position must be a string or nil")
+	)
+	assert(
+		position == nil or position == "add" or position == "prepend" or position == "append",
+		"Position must be one of 'add', 'prepend', 'append'"
+	)
+	return Handlers[position or "add"](
+		utils.camelCase(action),
+		Handlers.utils.hasMatchingTag("Action", action),
+		function(msg)
+			print("Handling Action [" .. msg.Id .. "]: " .. action)
+			local handlerStatus, handlerRes = xpcall(function()
+				msgHandler(msg)
+			end, utils.errorHandler)
+
+			if not handlerStatus then
+				ao.send({
+					Target = msg.From,
+					Action = "Invalid-" .. action .. "-Notice",
+					Error = action .. "-Error",
+					["Message-Id"] = msg.Id,
+					Data = handlerRes,
+				})
+			end
+
+			return handlerRes
+		end
+	)
+end
+
+function utils.affiliatesForAnt(ant)
+	local affliates = {}
+	if ant.Owner then
+		affliates[ant.Owner] = true
+	end
+	for address, _ in pairs(ant.Controllers) do
+		affliates[address] = true
+	end
+	return affliates
+end
+
+function utils.affiliationsForAddress(address, ants)
+	local affiliations = {
+		Owned = {},
+		Controlled = {},
 	}
-	-- Add forwarded tags to the credit and debit notice messages
-	for tagName, tagValue in pairs(msg) do
-		-- Tags beginning with "X-" are forwarded
-		if string.sub(tagName, 1, 2) == "X-" then
-			notice[tagName] = tagValue
+	for antId, ant in pairs(ants) do
+		if ant.Owner == address then
+			table.insert(affiliations.Owned, antId)
+		elseif ant.Controllers[address] then
+			table.insert(affiliations.Controlled, antId)
 		end
 	end
-
-	return notice
-end
-
--- @param notices table
-function utils.notices.sendNotices(notices)
-	for _, notice in ipairs(notices) do
-		ao.send(notice)
-	end
+	return affiliations
 end
 
 return utils
