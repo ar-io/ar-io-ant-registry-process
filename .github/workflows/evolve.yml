@@ -1,15 +1,14 @@
-name: Evolve Devnet ANT Registry
+name: Evolve ANT Registry
 
 on:
   push:
     branches:
-      - develop
+      - main
 
 jobs:
   # TODO: add unit tests using bused
   evolve:
     runs-on: ubuntu-latest
-    environment: development
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4.0.2
