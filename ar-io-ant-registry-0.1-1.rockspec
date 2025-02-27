@@ -2,7 +2,7 @@ package = "ar-io-ant-registry"
 version = "0.1-1"
 rockspec_format = "3.0"
 source = {
-    url = "./src/main.lua"
+    url = "./src/common/main.lua"
 }
 dependencies = {
     "busted >= 2.2.0",
