@@ -53,6 +53,26 @@ describe('ANT Versions', async () => {
     return addVersionRes;
   }
 
+  async function removeVersion({
+    version,
+    from = STUB_ADDRESS,
+    mem = startMemory,
+  } = {}) {
+    const removeVersionRes = await sendMessage(
+      {
+        From: from,
+        Tags: [
+          { name: 'Action', value: 'Remove-Version' },
+
+          { name: 'Version', value: version },
+        ].filter((t) => t.value !== undefined),
+      },
+      mem,
+    );
+
+    return removeVersionRes;
+  }
+
   async function getVersions(mem) {
     return await sendMessage(
       {
@@ -93,6 +113,51 @@ describe('ANT Versions', async () => {
         m.Tags.find((t) => t.value === 'Add-Version-Notice'),
       ),
       'Version was added by non-owner',
+    );
+  });
+
+  it('should remove a version', async () => {
+    const addVersionRes = await addVersion({
+      moduleId: validModuleIds[0],
+      luaSourceId: validSourceIds[0],
+      version: '1',
+      notes: 'Test notes',
+    });
+    const previousVersionsRes = await getVersions(addVersionRes.Memory);
+    const previousVersions = JSON.parse(previousVersionsRes.Messages[0].Data);
+    assert(previousVersions['1'], 'did not add version');
+
+    const removeVersionRes = await removeVersion({
+      version: '1',
+      mem: previousVersionsRes.Memory,
+    });
+    const currentVersionsRes = await getVersions(removeVersionRes.Memory);
+    const currentVersions = JSON.parse(currentVersionsRes.Messages[0].Data);
+
+    assert(!currentVersions['1'], 'failed to remove version');
+  });
+
+  it('should reject version removals from non-owner address', async () => {
+    const addVersionRes = await addVersion({
+      moduleId: validModuleIds[0],
+      luaSourceId: validSourceIds[0],
+      version: '1',
+      notes: 'Test notes',
+    });
+    const previousVersionsRes = await getVersions(addVersionRes.Memory);
+    const previousVersions = JSON.parse(previousVersionsRes.Messages[0].Data);
+    assert(previousVersions['1'], 'did not add version');
+
+    const removeVersionRes = await removeVersion({
+      version: '1',
+      from: 'non-owner-address',
+    });
+
+    assert(
+      !removeVersionRes.Messages.find((m) =>
+        m.Tags.find((t) => t.value === 'Remove-Version-Notice'),
+      ),
+      'Version was removed by non-owner',
     );
   });
 

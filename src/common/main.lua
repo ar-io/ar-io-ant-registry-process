@@ -23,6 +23,7 @@ main.init = function()
 		StateNotice = "State-Notice",
 		AccessControlList = "Access-Control-List",
 		AddVersion = "Add-Version",
+		RemoveVersion = "Remove-Version",
 		GetVersions = "Get-Versions",
 	}
 
@@ -83,6 +84,21 @@ main.init = function()
 		ao.send({
 			Target = msg.From,
 			Action = "Add-Version-Notice",
+			["Message-Id"] = msg.Id,
+			Data = json.encode(ANTVersions),
+		})
+	end)
+
+	utils.createActionHandler(ActionMap.RemoveVersion, function(msg)
+		assert(msg.From == Owner, "Only ANT Registry owner can add versions")
+		local version = tostring(msg.Version)
+
+		assert(ANTVersions[version], "Version " .. version .. " does not exist")
+
+		ANTVersions[version] = nil
+		ao.send({
+			Target = msg.From,
+			Action = "Remove-Version-Notice",
 			["Message-Id"] = msg.Id,
 			Data = json.encode(ANTVersions),
 		})
