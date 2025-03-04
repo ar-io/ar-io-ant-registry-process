@@ -28,22 +28,24 @@ describe('ANT Versions', async () => {
     );
   }
 
-  async function addVersion(
+  async function addVersion({
     moduleId,
     luaSourceId,
-    semver,
+    version,
+    notes = '',
     from = STUB_ADDRESS,
     mem = startMemory,
-  ) {
+  } = {}) {
     const addVersionRes = await sendMessage(
       {
-        From: from, // process owner or non-owner
+        From: from,
         Tags: [
           { name: 'Action', value: 'Add-Version' },
           { name: 'Module-Id', value: moduleId },
           { name: 'Lua-Source-Id', value: luaSourceId },
-          { name: 'Version', value: semver },
-        ],
+          { name: 'Version', value: version },
+          { name: 'Notes', value: notes },
+        ].filter((t) => t.value !== undefined),
       },
       mem,
     );
@@ -69,59 +71,91 @@ describe('ANT Versions', async () => {
     'another-lua-source-id-'.padEnd(43, '1'),
     undefined,
   ];
-  const validSemvers = [
-    '1.0.1',
-    '2.0.0',
-    '0.1.0',
-    '1.2.3',
-    '10.20.30',
-    '1.0.0-alpha',
-    '1.0.0-beta.2',
-    '9223372036854775807.0.0',
+  const validVersions = [0, 1, 2, 10, 100];
+  const validNotes = [
+    '',
+    'Test release',
+    'Bug fixes and improvements',
+    'Initial release',
   ];
+
+  it('should reject version additions from non-owner address', async () => {
+    const addVersionRes = await addVersion({
+      moduleId: validModuleIds[0],
+      luaSourceId: validSourceIds[0],
+      version: validVersions[0],
+      notes: 'Test notes',
+      from: 'non-owner-address',
+    });
+
+    assert(
+      !addVersionRes.Messages.find((m) =>
+        m.Tags.find((t) => t.value === 'Add-Version-Notice'),
+      ),
+      'Version was added by non-owner',
+    );
+  });
 
   const testCaseMapping = validModuleIds.flatMap((moduleId) =>
     validSourceIds.flatMap((luaSourceId) =>
-      validSemvers.map((semver) => ({ moduleId, luaSourceId, semver })),
+      validVersions.flatMap((version) =>
+        validNotes.map((notes) => ({ moduleId, luaSourceId, version, notes })),
+      ),
     ),
   );
 
   testCaseMapping.forEach((testCase) => {
-    it(`should add version correctly for module id: ${testCase.moduleId}, lua source id: ${testCase.luaSourceId}, semver: ${testCase.semver}`, async () => {
-      const getVersionsResBefore = await getVersions();
-      const versionsBefore = JSON.parse(getVersionsResBefore.Messages[0].Data);
-      const addVersionRes = await addVersion(
-        testCase.moduleId,
-        testCase.luaSourceId,
-        testCase.semver,
+    it('should reject version additions from non-owner address', async () => {
+      const addVersionRes = await addVersion({
+        moduleId: validModuleIds[0],
+        luaSourceId: validSourceIds[0],
+        version: validVersions[0],
+        notes: 'Test notes',
+        from: 'non-owner-address',
+      });
+
+      assert(
+        !addVersionRes.Messages.find((m) =>
+          m.Tags.find((t) => t.value === 'Add-Version-Notice'),
+        ),
+        'Version was added by non-owner',
       );
+    });
+
+    it(`should add version correctly for module id: ${testCase.moduleId}, lua source id: ${testCase.luaSourceId}, version: ${testCase.version}, notes: "${testCase.notes}"`, async () => {
+      // Update addVersion call to include notes
+      const addVersionRes = await addVersion({
+        moduleId: testCase.moduleId,
+        luaSourceId: testCase.luaSourceId,
+        version: testCase.version,
+        notes: testCase.notes,
+      });
+
       const addVersionNotice = addVersionRes.Messages.find((m) =>
         m.Tags.find((t) => t.value === 'Add-Version-Notice'),
       );
-      assert(addVersionNotice, 'Did not recieve add version notice');
+      assert(addVersionNotice, 'Did not receive add version notice');
       const getVersionsResAfter = await getVersions(addVersionRes.Memory);
       const versionsAfter = JSON.parse(getVersionsResAfter.Messages[0].Data);
 
       assert(
-        versionsAfter[testCase.semver],
-        `Version ${testCase.semver} was not added`,
+        versionsAfter[testCase.version],
+        `Version ${testCase.version} was not added`,
       );
       assert.strictEqual(
-        versionsAfter[testCase.semver].module,
+        versionsAfter[testCase.version].moduleId,
         testCase.moduleId,
         'Module ID does not match',
       );
       assert.strictEqual(
-        versionsAfter[testCase.semver].luaSource,
+        versionsAfter[testCase.version].luaSourceId,
         testCase.luaSourceId,
         'Lua Source ID does not match',
       );
-      const versionsAfterExcludingAdded = { ...versionsAfter };
-      delete versionsAfterExcludingAdded[testCase.semver];
-      assert.deepStrictEqual(
-        versionsAfterExcludingAdded,
-        versionsBefore,
-        'Pre-existing versions were changed',
+      assert.strictEqual(
+        versionsAfter[testCase.version].notes,
+        testCase.notes,
+        'Notes do not match',
       );
     });
   });
@@ -134,12 +168,12 @@ describe('ANT Versions', async () => {
 
   invalidModuleIds.forEach((invalidModuleId) => {
     it(`should reject invalid module id: ${invalidModuleId}`, async () => {
-      const addVersionRes = await addVersion(
-        invalidModuleId,
-        validSourceIds[0],
-        validSemvers[0],
-        'non-owner-address',
-      );
+      const addVersionRes = await addVersion({
+        moduleId: invalidModuleId,
+        luaSourceId: validSourceIds[0],
+        version: validVersions[0],
+        from: 'non-owner-address',
+      });
       assert(
         !addVersionRes.Messages.find((m) =>
           m.Tags.find((t) => t.value === 'Add-Version-Notice'),
@@ -156,12 +190,12 @@ describe('ANT Versions', async () => {
 
   invalidSourceIds.forEach((invalidSourceId) => {
     it(`should reject invalid lua source id: ${invalidSourceId}`, async () => {
-      const addVersionRes = await addVersion(
-        validModuleIds[0],
-        invalidSourceId,
-        validSemvers[0],
-        'non-owner-address',
-      );
+      const addVersionRes = await addVersion({
+        moduleId: validModuleIds[0],
+        luaSourceId: invalidSourceId,
+        version: validVersions[0],
+        from: 'non-owner-address',
+      });
       assert(
         !addVersionRes.Messages.find((m) =>
           m.Tags.find((t) => t.value === 'Add-Version-Notice'),
@@ -171,26 +205,21 @@ describe('ANT Versions', async () => {
     });
   });
 
-  const invalidSemvers = [
-    '1.0', // missing patch
-    '1', // missing minor and patch
-    '1.0.0.0', // too many segments
-    'v1.0.0', // contains invalid prefix
-    '1.0.0+build', // build metadata not supported
-    'not.a.version', // invalid format
-    '', // empty string
-    123, // non-string input
-    null, // null input
+  const invalidVersions = [
+    -1, // negative numbers
+    1.5, // floating point numbers
+    null, // null
+    undefined, // undefined
   ];
 
-  invalidSemvers.forEach((invalidSemver) => {
-    it(`should reject invalid semver: ${invalidSemver}`, async () => {
-      const addVersionRes = await addVersion(
-        validModuleIds[0],
-        validSourceIds[0],
-        invalidSemver,
-        'non-owner-address',
-      );
+  invalidVersions.forEach((invalidVersion) => {
+    it(`should reject invalid version: ${invalidVersion}`, async () => {
+      const addVersionRes = await addVersion({
+        moduleId: validModuleIds[0],
+        luaSourceId: validSourceIds[0],
+        version: invalidVersion,
+        from: 'non-owner-address',
+      });
       assert(
         !addVersionRes.Messages.find((m) =>
           m.Tags.find((t) => t.value === 'Add-Version-Notice'),
@@ -199,13 +228,30 @@ describe('ANT Versions', async () => {
       );
 
       // Check that the version was not added
-      const getVersionsRes = await getVersions(
-        invalidSemver,
-        addVersionRes.Memory,
-      );
+      const getVersionsRes = await getVersions(addVersionRes.Memory);
       assert(
-        !JSON.parse(getVersionsRes.Messages[0].Data)[invalidSemver],
-        `Version ${invalidSemver} was incorrectly added`,
+        !JSON.parse(getVersionsRes.Messages[0].Data)[invalidVersion],
+        `Version ${invalidVersion} was incorrectly added`,
+      );
+    });
+  });
+
+  const invalidNotes = [123, {}, []];
+
+  invalidNotes.forEach((invalidNote) => {
+    it(`should reject invalid notes: ${invalidNote}`, async () => {
+      const addVersionRes = await addVersion({
+        moduleId: validModuleIds[0],
+        luaSourceId: validSourceIds[0],
+        version: validVersions[0],
+        notes: invalidNote,
+      });
+
+      assert(
+        !addVersionRes.Messages.find((m) =>
+          m.Tags.find((t) => t.value === 'Add-Version-Notice'),
+        ),
+        'Version was added with invalid notes',
       );
     });
   });

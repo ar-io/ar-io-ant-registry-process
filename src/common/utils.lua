@@ -333,37 +333,6 @@ function utils.affiliationsForAddress(address, ants)
 	return affiliations
 end
 
---- @param versionString string
-function utils.validateSemver(versionString)
-	assert(type(versionString) == "string", "Version must be a string")
-
-	-- Reject versions with build metadata (anything after +)
-	if versionString:find("%+") then
-		error("Build metadata is not supported: " .. versionString)
-	end
-
-	-- The pattern now ensures there are exactly 3 version segments
-	-- and optionally a prerelease identifier
-	local pattern = "^(%d+)%.(%d+)%.(%d+)$"
-	local prereleasePattern = "^(%d+)%.(%d+)%.(%d+)%-([%w%.%-]+)$"
-
-	local hasMatch = versionString:match(pattern) or versionString:match(prereleasePattern)
-	if not hasMatch then
-		error("Invalid semver string: " .. versionString)
-	end
-
-	-- If we have a prerelease version, validate its format
-	local prerelease = versionString:match("^%d+%.%d+%.%d+%-([%w%.%-]+)$")
-	if prerelease then
-		assert(
-			prerelease:match("^[%w%.%-]+$"),
-			"Prerelease identifier must only contain letters, numbers, dots, and hyphens"
-		)
-	end
-
-	return versionString
-end
-
 --- Checks if an address is a valid Arweave address
 --- @param address string The address to check
 --- @return boolean isValidArweaveAddress - whether the address is a valid Arweave address

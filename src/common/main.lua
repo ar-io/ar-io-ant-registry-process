@@ -16,13 +16,7 @@ main.init = function()
 	-- ADDRESSES["userAddress"] = {"antProcessId1" = true, "antProcessId2" = true}
 	ADDRESSES = ADDRESSES or {}
 
-	ANTVersions = ANTVersions
-		or {
-			["1.0.0"] = {
-				module = "pb4fCvdJqwT-_bn38ERMdqnOF4weRMjoJ6bY6yfl4a8",
-				luaSource = "OO2ewZKq4AHoqGQmYUIl-NhJ-llQyFJ3ha4Uf4-w5RI",
-			},
-		}
+	ANTVersions = ANTVersions or {}
 
 	local ActionMap = {
 		Register = "Register",
@@ -67,21 +61,24 @@ main.init = function()
 
 	utils.createActionHandler(ActionMap.AddVersion, function(msg)
 		assert(msg.From == Owner, "Only ANT Registry owner can add versions")
-		local version = msg.Version
-		local module = msg["Module-Id"]
-		local luaSource = msg["Lua-Source-Id"]
+		local version = tonumber(msg.Version)
+		local moduleId = msg["Module-Id"]
+		local luaSourceId = msg["Lua-Source-Id"]
+		local notes = msg.Notes or ""
 
-		utils.validateSemver(version)
-		utils.validateArweaveId(module)
 		assert(
-			type(luaSource) == "string" and utils.validateArweaveId(luaSource) or luaSource == nil,
+			version ~= nil and math.type(version) == "integer" and version >= 0,
+			"Version must be a positive integer, recieved " .. tostring(version)
+		)
+		utils.validateArweaveId(moduleId)
+		assert(
+			type(luaSourceId) == "string" and utils.validateArweaveId(luaSourceId) or luaSourceId == nil,
 			"Lua-Source-Id should be a valid arweave ID"
 		)
-		assert(not ANTVersions[version], "Version " .. tostring(version) .. " already exists")
+		assert(type(notes) == "string", "Notes must be a string")
 
-		local newVersionData = { module = module, luaSource = luaSource }
-
-		ANTVersions[version] = newVersionData
+		ANTVersions[tostring(version)] =
+			{ messageId = msg.Id, moduleId = moduleId, luaSourceId = luaSourceId, notes = notes }
 
 		ao.send({
 			Target = msg.From,
