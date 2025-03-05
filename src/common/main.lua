@@ -16,10 +16,15 @@ main.init = function()
 	-- ADDRESSES["userAddress"] = {"antProcessId1" = true, "antProcessId2" = true}
 	ADDRESSES = ADDRESSES or {}
 
+	ANTVersions = ANTVersions or {}
+
 	local ActionMap = {
 		Register = "Register",
 		StateNotice = "State-Notice",
 		AccessControlList = "Access-Control-List",
+		AddVersion = "Add-Version",
+		RemoveVersion = "Remove-Version",
+		GetVersions = "Get-Versions",
 	}
 
 	utils.createActionHandler(ActionMap.Register, function(msg)
@@ -52,6 +57,59 @@ main.init = function()
 			Action = "Access-Control-List-Notice",
 			["Message-Id"] = msg.Id,
 			Data = json.encode(utils.affiliationsForAddress(address, ANTS)),
+		})
+	end)
+
+	utils.createActionHandler(ActionMap.AddVersion, function(msg)
+		assert(msg.From == Owner, "Only ANT Registry owner can add versions")
+		local version = tonumber(msg.Version)
+		local moduleId = msg["Module-Id"]
+		local luaSourceId = msg["Lua-Source-Id"]
+		local notes = msg.Notes or ""
+
+		assert(
+			version ~= nil and math.type(version) == "integer" and version >= 0,
+			"Version must be a positive integer, recieved " .. tostring(version)
+		)
+		utils.validateArweaveId(moduleId)
+		assert(
+			type(luaSourceId) == "string" and utils.validateArweaveId(luaSourceId) or luaSourceId == nil,
+			"Lua-Source-Id should be a valid arweave ID"
+		)
+		assert(type(notes) == "string", "Notes must be a string")
+
+		ANTVersions[tostring(version)] =
+			{ messageId = msg.Id, moduleId = moduleId, luaSourceId = luaSourceId, notes = notes }
+
+		ao.send({
+			Target = msg.From,
+			Action = "Add-Version-Notice",
+			["Message-Id"] = msg.Id,
+			Data = json.encode(ANTVersions),
+		})
+	end)
+
+	utils.createActionHandler(ActionMap.RemoveVersion, function(msg)
+		assert(msg.From == Owner, "Only ANT Registry owner can add versions")
+		local version = tostring(msg.Version)
+
+		assert(ANTVersions[version], "Version " .. version .. " does not exist")
+
+		ANTVersions[version] = nil
+		ao.send({
+			Target = msg.From,
+			Action = "Remove-Version-Notice",
+			["Message-Id"] = msg.Id,
+			Data = json.encode(ANTVersions),
+		})
+	end)
+
+	utils.createActionHandler(ActionMap.GetVersions, function(msg)
+		ao.send({
+			Target = msg.From,
+			Action = "Get-Versions-Notice",
+			["Message-Id"] = msg.Id,
+			Data = json.encode(ANTVersions),
 		})
 	end)
 end

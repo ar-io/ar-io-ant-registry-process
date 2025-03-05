@@ -3,7 +3,31 @@ name: Build and Test
 on: [push, workflow_dispatch]
 
 jobs:
-  # TODO: add unit tests using bused
+  unit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        name: Check out repository code
+
+      - name: Setup Lua
+        uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: '5.3' # Specify the Lua version you need
+
+      - name: Setup LuaRocks
+
+        uses: leafo/gh-actions-luarocks@v4.3.0
+
+      - name: Install Busted
+        run: luarocks install ar-io-ant-registry-0.1-1.rockspec
+
+      - name: Run Busted Tests
+        run: busted .
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
   integration:
     runs-on: ubuntu-latest
     steps:
@@ -15,12 +39,13 @@ jobs:
 
       - run: yarn --frozen-lockfile
       - run: yarn aos:build
-      - run: yarn test
+      - run: yarn test:integration
   evolve:
     # Run on main branch only
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    needs: integration
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+    needs: [integration, unit]
+    environment: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4.0.2

@@ -9,7 +9,9 @@
     "aos:publish": "node tools/bundle-aos.js && node tools/publish-aos.js",
     "aos:load": "node tools/bundle-aos.js && node tools/load-aos.js",
     "aos:spawn": "node tools/spawn-aos.js",
-    "test": "node --test-concurrency 1 --experimental-wasm-memory64 **/*.test.js",
+    "test:unit": "busted .",
+    "test:integration": "node --test --experimental-wasm-memory64 **/*.test.js",
+    "test": "yarn test:unit && yarn test:integration",
     "evolve": "yarn aos:build && node tools/evolve.js"
   },
   "devDependencies": {

@@ -333,4 +333,11 @@ function utils.affiliationsForAddress(address, ants)
 	return affiliations
 end
 
+--- Checks if an address is a valid Arweave address
+--- @param address string The address to check
+--- @return boolean isValidArweaveAddress - whether the address is a valid Arweave address
+function utils.validateArweaveId(address)
+	return type(address) == "string" and #address == 43 and string.match(address, "^[%w-_]+$") ~= nil
+end
+
 return utils
