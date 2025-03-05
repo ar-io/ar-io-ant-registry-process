@@ -43,8 +43,9 @@ jobs:
   evolve:
     # Run on main branch only
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    needs: integration
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+    needs: [integration, unit]
+    environment: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4.0.2
