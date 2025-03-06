@@ -63,6 +63,7 @@ jobs:
         env:
           WALLET: ${{ secrets.WALLET }}
           REGISTRY_ID: ${{ vars.REGISTRY_ID }}
+          VAOT_ID: ${{ vars.VAOT_ID}}
       - name: Notify Success
         if: success()
         uses: rtCamp/action-slack-notify@v2.3.0
@@ -94,7 +95,7 @@ jobs:
                 },
                  {
                   "title": "Vote on this proposal in VAOT",
-                  "value": "https://vaot.ar.io/#/${{ vars.REGISTRY_ID }}",
+                  "value": "https://vaot.ar.io/#/${{ vars.VAOT_ID }}",
                   "short": false
                 },
                 {
