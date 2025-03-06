@@ -13,7 +13,7 @@ const ao = connect({
   CU_URL: 'https://cu.ardrive.io',
 });
 
-const proposalResult = ao.message({
+const proposalResult = await ao.message({
   process: vaotId,
   tags: [
     { name: 'Action', value: 'Propose' },
@@ -24,4 +24,6 @@ const proposalResult = ao.message({
   data: BUNDLED_AOS_LUA,
   signer,
 });
+if (!proposalResult || typeof proposalResult !== 'string')
+  throw new Error('Failed to create proposal');
 console.log(`Evolve result: ${JSON.stringify(proposalResult)}`);
