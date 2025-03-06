@@ -1,6 +1,12 @@
 name: Build and Test
 
-on: [push, workflow_dispatch]
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - develop
+      - main
 
 jobs:
   unit:
@@ -57,3 +63,83 @@ jobs:
         env:
           WALLET: ${{ secrets.WALLET }}
           REGISTRY_ID: ${{ vars.REGISTRY_ID }}
+          VAOT_ID: ${{ vars.VAOT_ID}}
+      - name: Notify Success
+        if: success()
+        uses: rtCamp/action-slack-notify@v2.3.0
+        env:
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_TITLE: Update Proposed to ANT Registry Process!
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CUSTOM_PAYLOAD: |
+            {
+              "attachments": [{
+                "fallback": "Update Proposed for ANT Registry!",
+                "color": "good",
+                "title": "Details",
+                "text": 'The ANT Registry ${{ github.ref_name == 'main' && 'Testnet' || 'Devnet' }} Process has an update Proposal!',
+                "fields": [{
+                  "title": "Network",
+                  "value": "${{ github.ref_name == 'main' && 'testnet' || 'devnet' }}",
+                  "short": true
+                },
+                {
+                  "title": "Process ID",
+                  "value": "${{ vars.REGISTRY_ID }}",
+                  "short": true
+                },
+                {
+                  "title": "View on ao.link",
+                  "value": "https://www.ao.link/#/entity/${{ vars.REGISTRY_ID }}?tab=source-code",
+                  "short": false
+                },
+                 {
+                  "title": "Vote on this proposal in VAOT",
+                  "value": "https://vaot.ar.io/#/${{ vars.VAOT_ID }}",
+                  "short": false
+                },
+                {
+                  "title": "Commit",
+                  "value": "<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+                }
+                ]
+              }]
+            }
+
+      - name: Notify Failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_COLOR: danger
+          SLACK_TITLE: ANT Registry Process update Proposal FAILED!
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CUSTOM_PAYLOAD: |
+            {
+              "text": "ANT Registry Process Proposal Failed!",
+              "attachments": [{
+                "fallback": "Failed to propose update to ANT Registry!",
+                "color": "danger",
+                "title": "Details",
+                "text": 'The ANT Registry ${{ github.ref_name == 'main' && 'Testnet' || 'Devnet' }} Process FAILED to create an update Proposal!',
+                "fields": [{
+                  "title": "Network",
+                  "value": "${{ github.ref_name == 'main' && 'testnet' || 'devnet' }}",
+                  "short": true
+                },
+                {
+                  "title": "Process ID",
+                  "value": "${{ vars.REGISTRY_ID }}",
+                  "short": true
+                },
+                {
+                  "title": "GitHub Action",
+                  "value": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                  "short": false
+                },
+                {
+                  "title": "Commit",
+                  "value": "<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+                }
+                ]
+              }]
+            }
