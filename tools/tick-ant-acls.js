@@ -1,37 +1,29 @@
-import Arweave from 'arweave';
 import { connect, createDataItemSigner } from '@permaweb/aoconnect';
-import {
-  ANTRegistry,
-  AOProcess,
-  ANT_REGISTRY_ID,
-  ARIO,
-  ARIO_MAINNET_PROCESS_ID,
-} from '@ar.io/sdk';
+import { ANTRegistry, AOProcess, ARIO } from '@ar.io/sdk';
 import { pLimit } from 'plimit-lit';
 
-const arweave = Arweave.init({
-  host: 'arweave.net',
-  port: 443,
-  protocol: 'https',
-});
-
 async function main() {
-  const jwk = await arweave.wallets.generate();
+  const jwk = JSON.parse(process.env.WALLET);
+  const registryId = process.env.REGISTRY_ID;
+  const vaotId = process.env.VAOT_ID;
+  const arioProcessId = process.env.ARIO_PROCESS_ID;
+  const cuUrl = process.env.CU_URL;
+  const graphqlUrl = process.env.GRAPHQL_URL;
 
   const ao = connect({
-    CU_URL: 'https://cu.ardrive.io',
-    GRAPHQL_URL: 'https://arweave.net/graphql',
+    CU_URL: cuUrl,
+    GRAPHQL_URL: graphqlUrl,
   });
   const ario = ARIO.init({
     process: new AOProcess({
-      processId: ARIO_MAINNET_PROCESS_ID,
+      processId: arioProcessId,
       ao,
     }),
     signer: createDataItemSigner(jwk),
   });
   const antRegistry = ANTRegistry.init({
     process: new AOProcess({
-      processId: ANT_REGISTRY_ID,
+      processId: registryId,
       ao,
     }),
     signer: createDataItemSigner(jwk),
@@ -54,9 +46,9 @@ async function main() {
   }
 
   const antRegistryAntsRes = await ao.dryrun({
-    process: ANT_REGISTRY_ID,
-    From: '4Ko7JmGPtbKLLqctNFr6ukWqX0lt4l0ktXgYKyMlbsM',
-    Owner: '4Ko7JmGPtbKLLqctNFr6ukWqX0lt4l0ktXgYKyMlbsM',
+    process: registryId,
+    From: vaotId,
+    Owner: vaotId,
     data: "print(require('json').encode(require('.utils').keys(ANTS)))",
     tags: [
       {

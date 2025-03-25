@@ -13,7 +13,7 @@
     "test:integration": "node --test --experimental-wasm-memory64 **/*.test.js",
     "test": "yarn test:unit && yarn test:integration",
     "evolve": "yarn aos:build && node tools/evolve.js",
-    "monitor": "node tools/monitor.js"
+    "tick-ant-acls": "node tools/tick-ant-acls.js"
   },
   "devDependencies": {
     "@ar.io/sdk": "^3.8.4",
