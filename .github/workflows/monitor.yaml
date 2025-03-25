@@ -1,0 +1,98 @@
+name: ANT Registration Watchdog
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/10 * * * *' # Run every 10 minutes
+
+jobs:
+  monitor:
+    permissions:
+      contents: read
+      actions: read
+    runs-on: ubuntu-latest
+    env:
+      ANT_REGISTRY_PROCESS_ID: 'i_le_yKKPVstLTDSmkHRqf-wYphMnwB9OhleiTgMkWc'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Setup
+        run: yarn
+
+      - name: Monitor
+        run: yarn monitor
+        id: monitor
+
+      - name: Notify Failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2.3.0
+        env:
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_TITLE: ANT Registry Process Watchdog Failed!
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CUSTOM_PAYLOAD: |
+            {
+              "attachments": [
+                {
+                  "fallback": "ANT Registry Process Watchdog Failed",
+                  "color": "danger",
+                  "title": "Details",
+                  "text": "The ANT Registry Process has failed at least one watchdog test!",
+                  "fields": [
+                    {
+                      "title": "Network",
+                      "value": "mainnet",
+                      "short": true
+                    },
+                    {
+                      "title": "Process ID",
+                      "value": "i_le_yKKPVstLTDSmkHRqf-wYphMnwB9OhleiTgMkWc",
+                      "short": true
+                    },
+                    {
+                      "title": "GitHub Action",
+                      "value": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                      "short": false
+                    },
+                  ]
+                }
+              ]
+            }
+
+      # on sucess send a slack message
+      - name: Notify Success
+        if: success() && vars.NOTIFY_SUCCESS == 'true'
+        uses: rtCamp/action-slack-notify@v2.3.0
+        env:
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_TITLE: ANT Registry Process watchdog Success!
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CUSTOM_PAYLOAD: |
+            {
+              "attachments": [{
+                "fallback": "ANT Registry Process Observation Success!",
+                "color": "good",
+                "title": "Test Results",
+                "text": 'The ANT Registry Process has passed all watchdog tests!',
+                "fields": [
+
+                {
+                  "title": "Process ID",
+                  "value": "i_le_yKKPVstLTDSmkHRqf-wYphMnwB9OhleiTgMkWc",
+                  "short": true
+                },
+                {
+                  "title": "GitHub Action",
+                  "value": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                  "short": false
+                }
+                ]
+              }]
+            }
