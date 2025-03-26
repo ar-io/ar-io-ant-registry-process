@@ -2,19 +2,22 @@
 # yarn lockfile v1
 
 
-"@ar.io/sdk@2.1.0-alpha.6":
-  version "2.1.0-alpha.6"
-  resolved "https://registry.yarnpkg.com/@ar.io/sdk/-/sdk-2.1.0-alpha.6.tgz#e831d2153200c7503aaf72b294a5aebf6b0a3bcd"
-  integrity sha512-5Cso0T8ucIbw69zm0CNV9UDep0Q2rxPqjbTao0yi0XuAiTLD3M7J9u8+0O5Vf9n7ASjBeC6qTTm1LvQUIGQ0sA==
+"@ar.io/sdk@^3.8.4":
+  version "3.8.4"
+  resolved "https://registry.npmjs.org/@ar.io/sdk/-/sdk-3.8.4.tgz#1cab7cdf18c5b8e8720cbaf81241225df078ca5a"
+  integrity sha512-VVFynJEfv5PjBddxJFXlMO3vKynvZM+TsbkZ0NWk/+5nF04Q0W7iqpsHEyACVfydJBNiYLtMLxYdT5ARv+OQFA==
   dependencies:
+    "@dha-team/arbundles" "^1.0.1"
     "@permaweb/aoconnect" "^0.0.57"
-    arbundles "0.11.0"
-    arweave "1.14.4"
-    axios "1.7.2"
+    arweave "1.15.5"
+    axios "1.7.9"
     axios-retry "^4.3.0"
+    commander "^12.1.0"
     eventemitter3 "^5.0.1"
     plimit-lit "^3.0.1"
+    prompts "^2.4.2"
     winston "^3.13.0"
+    zod "^3.23.8"
 
 "@colors/colors@1.6.0", "@colors/colors@^1.6.0":
   version "1.6.0"
@@ -29,6 +32,30 @@
     colorspace "1.1.x"
     enabled "2.0.x"
     kuler "^2.0.0"
+
+"@dha-team/arbundles@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.npmjs.org/@dha-team/arbundles/-/arbundles-1.0.1.tgz#5e81039b74da241cf0e2b074ae77e489eec7887d"
+  integrity sha512-cgVxhZJLK1HG2+vcRBZ0CYGpxz7mA2QvLaspcw2gOzb2V/ZUxlifUu1aufBK3iz63Ww2OhgO0j9DstRJqrG1uA==
+  dependencies:
+    "@ethersproject/bytes" "^5.7.0"
+    "@ethersproject/hash" "^5.7.0"
+    "@ethersproject/providers" "^5.7.2"
+    "@ethersproject/signing-key" "^5.7.0"
+    "@ethersproject/transactions" "^5.7.0"
+    "@ethersproject/wallet" "^5.7.0"
+    "@noble/ed25519" "^1.6.1"
+    arweave "^1.15.1"
+    base64url "^3.0.1"
+    bs58 "^4.0.1"
+    keccak "^3.0.2"
+    secp256k1 "^5.0.0"
+  optionalDependencies:
+    "@randlabs/myalgo-connect" "^1.1.2"
+    algosdk "^1.13.1"
+    arweave-stream-tx "^1.1.0"
+    multistream "^4.1.0"
+    tmp-promise "^3.0.2"
 
 "@ethersproject/abstract-provider@^5.7.0":
   version "5.7.0"
@@ -325,17 +352,6 @@
   resolved "https://registry.yarnpkg.com/@fastify/busboy/-/busboy-2.1.1.tgz#b9da6a878a371829a0502c9b6c1c143ef6663f4d"
   integrity sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==
 
-"@irys/arweave@^0.0.2":
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@irys/arweave/-/arweave-0.0.2.tgz#c0e73eb8c15e323342d33ea92701d4036fd22ae3"
-  integrity sha512-ddE5h4qXbl0xfGlxrtBIwzflaxZUDlDs43TuT0u1OMfyobHul4AA1VEX72Rpzw2bOh4vzoytSqA1jCM7x9YtHg==
-  dependencies:
-    asn1.js "^5.4.1"
-    async-retry "^1.3.3"
-    axios "^1.4.0"
-    base64-js "^1.5.1"
-    bignumber.js "^9.1.1"
-
 "@noble/ed25519@^1.6.1":
   version "1.7.3"
   resolved "https://registry.yarnpkg.com/@noble/ed25519/-/ed25519-1.7.3.tgz#57e1677bf6885354b466c38e2b620c62f45a7123"
@@ -435,30 +451,6 @@ algosdk@^1.13.1:
     tweetnacl "^1.0.3"
     vlq "^2.0.4"
 
-arbundles@0.11.0:
-  version "0.11.0"
-  resolved "https://registry.yarnpkg.com/arbundles/-/arbundles-0.11.0.tgz#2a8bbc142aae6c56588dffd8cd4b20b931a4e578"
-  integrity sha512-8U4u5TjbD14mBO9bJkUfynVrHztBGtvYcMx2E5Yuyu/iiSRByJDFHfCINAY3+zvllkTipbPjTP5XlACJQIuRcw==
-  dependencies:
-    "@ethersproject/bytes" "^5.7.0"
-    "@ethersproject/hash" "^5.7.0"
-    "@ethersproject/providers" "^5.7.2"
-    "@ethersproject/signing-key" "^5.7.0"
-    "@ethersproject/transactions" "^5.7.0"
-    "@ethersproject/wallet" "^5.7.0"
-    "@irys/arweave" "^0.0.2"
-    "@noble/ed25519" "^1.6.1"
-    base64url "^3.0.1"
-    bs58 "^4.0.1"
-    keccak "^3.0.2"
-    secp256k1 "^5.0.0"
-  optionalDependencies:
-    "@randlabs/myalgo-connect" "^1.1.2"
-    algosdk "^1.13.1"
-    arweave-stream-tx "^1.1.0"
-    multistream "^4.1.0"
-    tmp-promise "^3.0.2"
-
 arconnect@^0.4.2:
   version "0.4.2"
   resolved "https://registry.yarnpkg.com/arconnect/-/arconnect-0.4.2.tgz#83de7638fb46183e82d7ec7efb5594c5f7cdc806"
@@ -473,10 +465,10 @@ arweave-stream-tx@^1.1.0:
   dependencies:
     exponential-backoff "^3.1.0"
 
-arweave@1.14.4:
-  version "1.14.4"
-  resolved "https://registry.yarnpkg.com/arweave/-/arweave-1.14.4.tgz#5ba22136aa0e7fd9495258a3931fb770c9d6bf21"
-  integrity sha512-tmqU9fug8XAmFETYwgUhLaD3WKav5DaM4p1vgJpEj/Px2ORPPMikwnSySlFymmL2qgRh2ZBcZsg11+RXPPGLsA==
+arweave@1.15.5:
+  version "1.15.5"
+  resolved "https://registry.npmjs.org/arweave/-/arweave-1.15.5.tgz#d0fb209de01bfc9dc97d5da70270928a83ecee83"
+  integrity sha512-Zj3b8juz1ZtDaQDPQlzWyk2I4wZPx3RmcGq8pVJeZXl2Tjw0WRy5ueHPelxZtBLqCirGoZxZEAFRs6SZUSCBjg==
   dependencies:
     arconnect "^0.4.2"
     asn1.js "^5.4.1"
@@ -503,13 +495,6 @@ asn1.js@^5.4.1:
     minimalistic-assert "^1.0.0"
     safer-buffer "^2.1.0"
 
-async-retry@^1.3.3:
-  version "1.3.3"
-  resolved "https://registry.yarnpkg.com/async-retry/-/async-retry-1.3.3.tgz#0e7f36c04d8478e7a58bdbed80cedf977785f280"
-  integrity sha512-wfr/jstw9xNi/0teMHrRW7dsz3Lt5ARhYNZ2ewpadnhaIp5mbALhOAP+EAdsC7t4Z6wqsDVv9+W6gm1Dk9mEyw==
-  dependencies:
-    retry "0.13.1"
-
 async@^3.2.3:
   version "3.2.5"
   resolved "https://registry.yarnpkg.com/async/-/async-3.2.5.tgz#ebd52a8fdaf7a2289a24df399f8d8485c8a46b66"
@@ -527,19 +512,10 @@ axios-retry@^4.3.0:
   dependencies:
     is-retry-allowed "^2.2.0"
 
-axios@1.7.2:
-  version "1.7.2"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-1.7.2.tgz#b625db8a7051fbea61c35a3cbb3a1daa7b9c7621"
-  integrity sha512-2A8QhOMrbomlDuiLeK9XibIBzuHeRcqqNOHp0Cyp5EoJ1IFDh+XZH3A6BkXtv0K4gFGCI0Y4BM7B1wOEi0Rmgw==
-  dependencies:
-    follow-redirects "^1.15.6"
-    form-data "^4.0.0"
-    proxy-from-env "^1.1.0"
-
-axios@^1.4.0:
-  version "1.7.3"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-1.7.3.tgz#a1125f2faf702bc8e8f2104ec3a76fab40257d85"
-  integrity sha512-Ar7ND9pU99eJ9GpoGQKhKf58GpUOgnzuaB7ueNQ5BMi0p+LZ5oaEnfF999fAArcTIBwXTCHAmGcHOZJaWPq9Nw==
+axios@1.7.9:
+  version "1.7.9"
+  resolved "https://registry.npmjs.org/axios/-/axios-1.7.9.tgz#d7d071380c132a24accda1b2cfc1535b79ec650a"
+  integrity sha512-LhLcE7Hbiryz8oMDdDptSrWowmB4Bl6RCt6sIJKpRB4XtVf0iEgewX3au/pJqm+Py1kCASkb/FFKjxQaLtxJvw==
   dependencies:
     follow-redirects "^1.15.6"
     form-data "^4.0.0"
@@ -567,7 +543,7 @@ bech32@1.1.4:
   resolved "https://registry.yarnpkg.com/bech32/-/bech32-1.1.4.tgz#e38c9f37bf179b8eb16ae3a772b40c356d4832e9"
   integrity sha512-s0IrSOzLlbvX7yp4WBfPITzpAU8sqQcpsmwXDiKwrG4r491vwCO/XpejasRNl0piBMe/DvP4Tz0mIS/X1DPJBQ==
 
-bignumber.js@^9.0.0, bignumber.js@^9.0.2, bignumber.js@^9.1.1:
+bignumber.js@^9.0.0, bignumber.js@^9.0.2:
   version "9.1.2"
   resolved "https://registry.yarnpkg.com/bignumber.js/-/bignumber.js-9.1.2.tgz#b7c4242259c008903b13707983b5f4bbd31eda0c"
   integrity sha512-2/mKyZH9K85bzOEfhXDBFZTGd1CTs+5IHpeFQo9luiBG7hghdC851Pj2WAhb6E3R6b9tZj/XKhbg4fum+Kepug==
@@ -649,6 +625,11 @@ combined-stream@^1.0.8:
   integrity sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==
   dependencies:
     delayed-stream "~1.0.0"
+
+commander@^12.1.0:
+  version "12.1.0"
+  resolved "https://registry.npmjs.org/commander/-/commander-12.1.0.tgz#01423b36f501259fdaac4d0e4d60c96c991585d3"
+  integrity sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==
 
 cross-fetch@^3.1.5:
   version "3.1.8"
@@ -824,6 +805,11 @@ keccak@^3.0.2:
     node-gyp-build "^4.2.0"
     readable-stream "^3.6.0"
 
+kleur@^3.0.3:
+  version "3.0.3"
+  resolved "https://registry.npmjs.org/kleur/-/kleur-3.0.3.tgz#a79c9ecc86ee1ce3fa6206d1216c501f147fc07e"
+  integrity sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==
+
 kuler@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/kuler/-/kuler-2.0.0.tgz#e2c570a3800388fb44407e851531c1d670b061b3"
@@ -936,7 +922,7 @@ one-time@^1.0.0:
 
 plimit-lit@^3.0.1:
   version "3.0.1"
-  resolved "https://registry.yarnpkg.com/plimit-lit/-/plimit-lit-3.0.1.tgz#45a2aee1a7249aa9c2eafc67b6a27bc927e3aa39"
+  resolved "https://registry.npmjs.org/plimit-lit/-/plimit-lit-3.0.1.tgz#45a2aee1a7249aa9c2eafc67b6a27bc927e3aa39"
   integrity sha512-EyTTdP5LMX6WbHihG8R9w6DS+c3pyMpeKooOFuGDCyuVBogQjYNtoYwKLRD6hM1+VkHzGcfIuyLoWi6l5JA3iA==
   dependencies:
     queue-lit "^3.0.0"
@@ -945,6 +931,14 @@ prettier@^3.3.2:
   version "3.3.2"
   resolved "https://registry.yarnpkg.com/prettier/-/prettier-3.3.2.tgz#03ff86dc7c835f2d2559ee76876a3914cec4a90a"
   integrity sha512-rAVeHYMcv8ATV5d508CFdn+8/pHPpXeIid1DdrPwXnaAdH7cqjVbpJaT5eq4yRAFU/lsbwYwSF/n5iNrdJHPQA==
+
+prompts@^2.4.2:
+  version "2.4.2"
+  resolved "https://registry.npmjs.org/prompts/-/prompts-2.4.2.tgz#7b57e73b3a48029ad10ebd44f74b01722a4cb069"
+  integrity sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q==
+  dependencies:
+    kleur "^3.0.3"
+    sisteransi "^1.0.5"
 
 proxy-from-env@^1.1.0:
   version "1.1.0"
@@ -974,11 +968,6 @@ readable-stream@^3.4.0, readable-stream@^3.6.0, readable-stream@^3.6.2:
     inherits "^2.0.3"
     string_decoder "^1.1.1"
     util-deprecate "^1.0.1"
-
-retry@0.13.1:
-  version "0.13.1"
-  resolved "https://registry.yarnpkg.com/retry/-/retry-0.13.1.tgz#185b1587acf67919d63b357349e03537b2484658"
-  integrity sha512-XQBQ3I8W1Cge0Seh+6gjj03LbmRFWuoszgK9ooCpwYIrhhoO80pfq4cUkU5DkknwfOfFteRwlZ56PYOGYyFWdg==
 
 safe-buffer@^5.0.1, safe-buffer@~5.2.0:
   version "5.2.1"
@@ -1015,6 +1004,11 @@ simple-swizzle@^0.2.2:
   integrity sha512-JA//kQgZtbuY83m+xT+tXJkmJncGMTFT+C+g2h2R9uxkYIrE2yy9sgmcLhCnw57/WSD+Eh3J97FPEDFnbXnDUg==
   dependencies:
     is-arrayish "^0.3.1"
+
+sisteransi@^1.0.5:
+  version "1.0.5"
+  resolved "https://registry.npmjs.org/sisteransi/-/sisteransi-1.0.5.tgz#134d681297756437cc05ca01370d3a7a571075ed"
+  integrity sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==
 
 stack-trace@0.0.x:
   version "0.0.10"

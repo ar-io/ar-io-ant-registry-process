@@ -12,13 +12,15 @@
     "test:unit": "busted .",
     "test:integration": "node --test --experimental-wasm-memory64 **/*.test.js",
     "test": "yarn test:unit && yarn test:integration",
-    "evolve": "yarn aos:build && node tools/evolve.js"
+    "evolve": "yarn aos:build && node tools/evolve.js",
+    "tick-ant-acls": "node tools/tick-ant-acls.js"
   },
   "devDependencies": {
-    "@ar.io/sdk": "2.1.0-alpha.6",
+    "@ar.io/sdk": "^3.8.4",
     "@permaweb/ao-loader": "^0.0.35",
     "@permaweb/aoconnect": "^0.0.56",
     "arweave": "^1.15.1",
+    "plimit-lit": "^3.0.1",
     "prettier": "^3.3.2"
   },
   "dependencies": {}
