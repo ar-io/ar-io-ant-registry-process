@@ -1,14 +1,27 @@
 import { connect, createDataItemSigner } from '@permaweb/aoconnect';
 import { ANTRegistry, AOProcess, ARIO } from '@ar.io/sdk';
 import { pLimit } from 'plimit-lit';
+import Arweave from 'arweave';
+
+const arweave = Arweave.init({
+  host: 'arweave.net',
+  port: 443,
+  protocol: 'https',
+});
 
 async function main() {
-  const jwk = JSON.parse(process.env.WALLET);
-  const registryId = process.env.REGISTRY_ID;
-  const vaotId = process.env.VAOT_ID;
-  const arioProcessId = process.env.ARIO_PROCESS_ID;
-  const cuUrl = process.env.CU_URL;
-  const graphqlUrl = process.env.GRAPHQL_URL;
+  const jwk = process.env.WALLET
+    ? JSON.parse(process.env.WALLET)
+    : await arweave.wallets.generate();
+  const registryId =
+    process.env.REGISTRY_ID ?? 'i_le_yKKPVstLTDSmkHRqf-wYphMnwB9OhleiTgMkWc';
+  const vaotId =
+    process.env.VAOT_ID ?? '4Ko7JmGPtbKLLqctNFr6ukWqX0lt4l0ktXgYKyMlbsM';
+  const arioProcessId =
+    process.env.ARIO_PROCESS_ID ??
+    'qNvAoz0TgcH7DMg8BCVn8jF32QH5L6T29VjHxhHqqGE';
+  const cuUrl = process.env.CU_URL ?? 'https://cu.ardrive.io';
+  const graphqlUrl = process.env.GRAPHQL_URL ?? 'https://arweave.net/graphql';
 
   const ao = connect({
     CU_URL: cuUrl,
@@ -34,11 +47,12 @@ async function main() {
   let hasMore = true;
 
   while (hasMore) {
+    console.log(`Fetching ANTs from cursor ${cursor}`);
     const result = await ario.getArNSRecords({
       cursor,
       limit: 1000,
     });
-    cursor = result.cursor;
+    cursor = result.nextCursor;
     hasMore = result.hasMore;
     result.items.forEach((item) => {
       antIds.add(item.processId);
@@ -62,7 +76,7 @@ async function main() {
   const antsToRegister = Array.from(antIds).filter(
     (antId) => !antRegistryAnts.includes(antId),
   );
-
+  console.log(`Found ${antsToRegister.length} ANTs to register`);
   const throttle = pLimit(50);
 
   await Promise.all(
@@ -74,6 +88,8 @@ async function main() {
       ),
     ),
   );
+  console.log('Done');
+  process.exit(0);
 }
 
 main();
