@@ -44,7 +44,7 @@ main.init = function()
 
 	utils.createActionHandler(ActionMap.StateNotice, function(msg)
 		local ant = utils.parseAntState(msg.Data)
-		utils.updateAffiliations(msg.From, ant, ADDRESSES, ANTS)
+		utils.updateAffiliations(msg.From, ant, ADDRESSES, ANTS, tonumber(msg.Timestamp))
 	end)
 
 	utils.createActionHandler(ActionMap.AccessControlList, function(msg)

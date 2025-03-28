@@ -227,13 +227,18 @@ function utils.controllerTableFromArray(t)
 	return map
 end
 
-function utils.updateAffiliations(antId, newAnt, addresses, ants)
+function utils.updateAffiliations(antId, newAnt, addresses, ants, currentTimestamp)
 	-- Remove previous affiliations for old owner and controllers
 	local maybeOldAnt = ants[antId]
 	local newAffliates = utils.affiliatesForAnt(newAnt)
 
 	-- Remove stale address affiliations
 	if maybeOldAnt ~= nil then
+		local lastUpdatedAt = maybeOldAnt.lastUpdatedAt
+		assert(
+			lastUpdatedAt == nil or lastUpdatedAt <= currentTimestamp,
+			"Last updated timestamp is greater than the current timestamp"
+		)
 		local oldAffliates = utils.affiliatesForAnt(maybeOldAnt)
 		for oldAffliate, _ in pairs(oldAffliates) do
 			if not newAffliates[oldAffliate] and addresses[oldAffliate] then
@@ -255,6 +260,7 @@ function utils.updateAffiliations(antId, newAnt, addresses, ants)
 		ants[antId] = nil
 	else
 		ants[antId] = newAnt
+		ants[antId].lastUpdatedAt = currentTimestamp
 	end
 end
 
