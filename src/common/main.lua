@@ -44,7 +44,8 @@ main.init = function()
 
 	utils.createActionHandler(ActionMap.StateNotice, function(msg)
 		local ant = utils.parseAntState(msg.Data)
-		utils.updateAffiliations(msg.From, ant, ADDRESSES, ANTS, tonumber(msg.Timestamp))
+		-- we pass in the reference as the state nonce
+		utils.updateAffiliations(msg.From, ant, ADDRESSES, ANTS, tonumber(msg.Reference))
 	end)
 
 	utils.createActionHandler(ActionMap.AccessControlList, function(msg)

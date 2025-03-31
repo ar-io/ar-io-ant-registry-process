@@ -101,11 +101,11 @@ describe('ANT Registration Cases', async () => {
     assert.strictEqual(failureNotice.value, 'Invalid-State-Notice-Notice');
   });
 
-  it('should handle timestamp ordering correctly', async () => {
-    const antId1 = ''.padEnd(43, 'timestamp-test-1');
-    const antId2 = ''.padEnd(43, 'timestamp-test-2');
+  it('should handle reference ordering correctly', async () => {
+    const antId1 = ''.padEnd(43, 'reference-test-1');
+    const antId2 = ''.padEnd(43, 'reference-test-2');
 
-    // First state notice with initial timestamp
+    // First state notice with initial reference
     const stateData1 = JSON.stringify({
       Owner: STUB_ADDRESS,
       Controllers: [STUB_ADDRESS],
@@ -113,11 +113,11 @@ describe('ANT Registration Cases', async () => {
       Ticker: 'ANT1',
     });
 
-    // initialize with a nil lastUpdatedAt timestamp - migration purposes
+    // initialize with a nil lastReference - migration purposes
     const result0 = await sendMessage({
       Tags: [{ name: 'Action', value: 'Eval' }],
-      Data: `ANTS['${antId1}'] = { Owner: '${STUB_ADDRESS}', Controllers: {'${STUB_ADDRESS}'} }`,
-      Timestamp: 0,
+      Data: `ANTS['${antId1}'] = { Owner = '${STUB_ADDRESS}', Controllers = { ['${STUB_ADDRESS}'] = true } }`,
+      Reference: 0,
     });
 
     const result1 = await sendMessage(
@@ -126,12 +126,12 @@ describe('ANT Registration Cases', async () => {
         Data: stateData1,
         From: antId1,
         Owner: antId1,
-        Timestamp: 1000,
+        Reference: 1000,
       },
       result0.Memory,
     );
 
-    // Second state notice with later timestamp
+    // Second state notice with later reference
     const stateData2 = JSON.stringify({
       Owner: STUB_ADDRESS,
       Controllers: [STUB_ADDRESS],
@@ -145,12 +145,12 @@ describe('ANT Registration Cases', async () => {
         Data: stateData2,
         From: antId2,
         Owner: antId2,
-        Timestamp: 2000,
+        Reference: 2000,
       },
       result1.Memory,
     );
 
-    // Try to update first ANT with an earlier timestamp (should fail)
+    // Try to update first ANT with an earlier reference (should fail)
     const updatedStateData1 = JSON.stringify({
       Owner: STUB_ADDRESS,
       Controllers: [STUB_ADDRESS],
@@ -164,7 +164,7 @@ describe('ANT Registration Cases', async () => {
         Data: updatedStateData1,
         From: antId1,
         Owner: antId1,
-        Timestamp: 500, // Earlier timestamp
+        Reference: 500, // Earlier reference
       },
       result2.Memory,
     );
@@ -176,16 +176,16 @@ describe('ANT Registration Cases', async () => {
     );
     assert.strictEqual(failureAction.value, 'Invalid-State-Notice-Notice');
 
-    // Successful update with later timestamp
+    // Successful update with later reference
     const successUpdate = await sendMessage(
       {
         Tags: [{ name: 'Action', value: 'State-Notice' }],
         Data: updatedStateData1,
         From: antId1,
         Owner: antId1,
-        Timestamp: 3000, // Later timestamp
+        Reference: 3000, // Later reference
       },
-      result2.Memory,
+      failedUpdate.Memory,
     );
 
     // Should not have any error messages

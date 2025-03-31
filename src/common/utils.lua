@@ -227,16 +227,16 @@ function utils.controllerTableFromArray(t)
 	return map
 end
 
-function utils.updateAffiliations(antId, newAnt, addresses, ants, currentTimestamp)
+function utils.updateAffiliations(antId, newAnt, addresses, ants, currentReference)
 	-- Remove previous affiliations for old owner and controllers
 	local maybeOldAnt = ants[antId]
 	local newAffliates = utils.affiliatesForAnt(newAnt)
 
 	-- Remove stale address affiliations
 	if maybeOldAnt ~= nil then
-		local lastUpdatedAt = maybeOldAnt.lastUpdatedAt
+		local lastReference = maybeOldAnt.lastReference
 		assert(
-			lastUpdatedAt == nil or lastUpdatedAt <= currentTimestamp,
+			lastReference == nil or lastReference <= currentReference,
 			"Last updated timestamp is greater than the current timestamp"
 		)
 		local oldAffliates = utils.affiliatesForAnt(maybeOldAnt)
@@ -260,7 +260,7 @@ function utils.updateAffiliations(antId, newAnt, addresses, ants, currentTimesta
 		ants[antId] = nil
 	else
 		ants[antId] = newAnt
-		ants[antId].lastUpdatedAt = currentTimestamp
+		ants[antId].lastReference = currentReference
 	end
 end
 
@@ -289,10 +289,13 @@ function utils.createActionHandler(action, msgHandler, position)
 		position == nil or position == "add" or position == "prepend" or position == "append",
 		"Position must be one of 'add', 'prepend', 'append'"
 	)
+
 	return Handlers[position or "add"](
 		utils.camelCase(action),
 		Handlers.utils.hasMatchingTag("Action", action),
 		function(msg)
+			-- backwards compatibility for old message types
+			msg.Reference = msg._Ref or msg.Reference
 			print("Handling Action [" .. msg.Id .. "]: " .. action)
 			local handlerStatus, handlerRes = xpcall(function()
 				msgHandler(msg)
