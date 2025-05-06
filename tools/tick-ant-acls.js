@@ -31,26 +31,26 @@ async function main() {
     .withWaitStrategy('ao-cu', Wait.forHttp(`/state/${arioProcessId}`, 6363))
     .withWaitStrategy('ao-cu', Wait.forHttp(`/state/${registryId}`, 6363))
     .up();
-  try {
-    const ao = connect({
-      CU_URL: cuUrl,
-      GRAPHQL_URL: graphqlUrl,
-    });
-    const ario = ARIO.init({
-      process: new AOProcess({
-        processId: arioProcessId,
-        ao,
-      }),
-      signer: createDataItemSigner(jwk),
-    });
-    const antRegistry = ANTRegistry.init({
-      process: new AOProcess({
-        processId: registryId,
-        ao,
-      }),
-      signer: createDataItemSigner(jwk),
-    });
 
+  const ao = connect({
+    CU_URL: cuUrl,
+    GRAPHQL_URL: graphqlUrl,
+  });
+  const ario = ARIO.init({
+    process: new AOProcess({
+      processId: arioProcessId,
+      ao,
+    }),
+    signer: createDataItemSigner(jwk),
+  });
+  const antRegistry = ANTRegistry.init({
+    process: new AOProcess({
+      processId: registryId,
+      ao,
+    }),
+    signer: createDataItemSigner(jwk),
+  });
+  try {
     const antIds = new Set();
     let cursor = undefined;
     let hasMore = true;
@@ -67,7 +67,7 @@ async function main() {
         antIds.add(item.processId);
       });
     }
-
+    console.log('Fetching unregistered ants from registry...');
     const antRegistryAntsRes = await ao.dryrun({
       process: registryId,
       From: vaotId,
@@ -81,7 +81,6 @@ async function main() {
       ],
     });
     const antRegistryAnts = JSON.parse(antRegistryAntsRes.Output.data);
-
     const antsToRegister = Array.from(antIds).filter(
       (antId) => !antRegistryAnts.includes(antId),
     );
@@ -98,6 +97,7 @@ async function main() {
       ),
     );
   } catch (error) {
+    await compose.down();
     console.error(error);
     process.exit(1);
   } finally {
