@@ -90,7 +90,7 @@ async function main() {
   )
     .withWaitStrategy('ao-cu-1', Wait.forHttp(`/state/${registryId}`, 6363))
     .withWaitStrategy('ao-cu-1', Wait.forHttp(`/state/${arioProcessId}`, 6363))
-    .withStartupTimeout(15 * 60_000) // 15 minutes
+    .withStartupTimeout(30 * 60_000) // 30 minutes
     .up();
 
   console.log('Local CU ready!');
