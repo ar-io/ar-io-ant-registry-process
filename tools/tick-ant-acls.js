@@ -4,6 +4,8 @@ import { pLimit } from 'plimit-lit';
 import Arweave from 'arweave';
 import { DockerComposeEnvironment, Wait } from 'testcontainers';
 
+const projectRootPath = process.cwd();
+
 const arweave = Arweave.init({
   host: 'arweave.net',
   port: 443,
@@ -22,67 +24,85 @@ const arioProcessId =
 const cuUrl = process.env.CU_URL ?? 'http://localhost:6363';
 const graphqlUrl = process.env.GRAPHQL_URL ?? 'https://arweave.net/graphql';
 
+const ao = connect({
+  CU_URL: cuUrl,
+  GRAPHQL_URL: graphqlUrl,
+});
+const ario = ARIO.init({
+  process: new AOProcess({
+    processId: arioProcessId,
+    ao,
+  }),
+  signer: createDataItemSigner(jwk),
+});
+const antRegistry = ANTRegistry.init({
+  process: new AOProcess({
+    processId: registryId,
+    ao,
+  }),
+  signer: createDataItemSigner(jwk),
+});
+
+const fetchAllArNSProcessIds = async () => {
+  const antIds = new Set();
+  let cursor = undefined;
+  let hasMore = true;
+
+  while (hasMore) {
+    console.log(`Fetching ANTs from cursor ${cursor}`);
+    const result = await ario.getArNSRecords({
+      cursor,
+      limit: 1000,
+    });
+    cursor = result.nextCursor;
+    hasMore = result.hasMore;
+    for (const item of result.items) {
+      antIds.add(item.processId);
+    }
+  }
+  console.log(`Found ${antIds.size} ANTs`);
+  return antIds;
+};
+
+const fetchAllProcessIdsInRegistry = async () => {
+  console.log('Fetching unregistered ants from registry...');
+  const antRegistryAntsRes = await ao.dryrun({
+    process: registryId,
+    From: vaotId,
+    Owner: vaotId,
+    data: "print(require('json').encode(require('.utils').keys(ANTS)))",
+    tags: [
+      {
+        name: 'Action',
+        value: 'Eval',
+      },
+    ],
+  });
+  const antRegistryAnts = JSON.parse(antRegistryAntsRes.Output.data);
+  return Array.from(antRegistryAnts);
+};
+
 async function main() {
-  const projectRootPath = process.cwd();
+  console.log('Spinning up ao-cu...');
   const compose = await new DockerComposeEnvironment(
     projectRootPath,
     'tools/docker-compose.test.yml',
   )
-    .withWaitStrategy('ao-cu', Wait.forHttp(`/state/${arioProcessId}`, 6363))
-    .withWaitStrategy('ao-cu', Wait.forHttp(`/state/${registryId}`, 6363))
+    .withWaitStrategy('ao-cu-1', Wait.forHttp(`/state/${registryId}`, 6363))
+    .withWaitStrategy('ao-cu-1', Wait.forHttp(`/state/${arioProcessId}`, 6363))
+    .withStartupTimeout(15 * 60_000) // 15 minutes
     .up();
 
-  const ao = connect({
-    CU_URL: cuUrl,
-    GRAPHQL_URL: graphqlUrl,
-  });
-  const ario = ARIO.init({
-    process: new AOProcess({
-      processId: arioProcessId,
-      ao,
-    }),
-    signer: createDataItemSigner(jwk),
-  });
-  const antRegistry = ANTRegistry.init({
-    process: new AOProcess({
-      processId: registryId,
-      ao,
-    }),
-    signer: createDataItemSigner(jwk),
-  });
-  try {
-    const antIds = new Set();
-    let cursor = undefined;
-    let hasMore = true;
+  console.log('Local CU ready!');
 
-    while (hasMore) {
-      console.log(`Fetching ANTs from cursor ${cursor}`);
-      const result = await ario.getArNSRecords({
-        cursor,
-        limit: 1000,
-      });
-      cursor = result.nextCursor;
-      hasMore = result.hasMore;
-      result.items.forEach((item) => {
-        antIds.add(item.processId);
-      });
-    }
-    console.log('Fetching unregistered ants from registry...');
-    const antRegistryAntsRes = await ao.dryrun({
-      process: registryId,
-      From: vaotId,
-      Owner: vaotId,
-      data: "print(require('json').encode(require('.utils').keys(ANTS)))",
-      tags: [
-        {
-          name: 'Action',
-          value: 'Eval',
-        },
-      ],
-    });
-    const antRegistryAnts = JSON.parse(antRegistryAntsRes.Output.data);
-    const antsToRegister = Array.from(antIds).filter(
-      (antId) => !antRegistryAnts.includes(antId),
+  try {
+    const [processIdsForNames, processIdsInRegistry] = await Promise.all([
+      fetchAllArNSProcessIds(),
+      fetchAllProcessIdsInRegistry(),
+    ]);
+
+    const antsToRegister = processIdsForNames.filter(
+      (antId) => !processIdsInRegistry.includes(antId),
     );
     console.log(`Found ${antsToRegister.length} ANTs to register`);
     const throttle = pLimit(50);
