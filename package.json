@@ -16,7 +16,7 @@
     "tick-ant-acls": "node tools/tick-ant-acls.js"
   },
   "devDependencies": {
-    "@ar.io/sdk": "^3.8.4",
+    "@ar.io/sdk": "^3.10.0",
     "@permaweb/ao-loader": "^0.0.35",
     "@permaweb/aoconnect": "^0.0.56",
     "arweave": "^1.15.1",
