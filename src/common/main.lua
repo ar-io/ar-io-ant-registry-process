@@ -67,6 +67,7 @@ main.init = function()
 		local moduleId = msg["Module-Id"]
 		local luaSourceId = msg["Lua-Source-Id"]
 		local notes = msg.Notes or ""
+		local releaseDate = tonumber(msg["Release-Date"] or msg.Timestamp)
 
 		assert(
 			version ~= nil and math.type(version) == "integer" and version >= 0,
@@ -79,8 +80,13 @@ main.init = function()
 		)
 		assert(type(notes) == "string", "Notes must be a string")
 
-		ANTVersions[tostring(version)] =
-			{ messageId = msg.Id, moduleId = moduleId, luaSourceId = luaSourceId, notes = notes }
+		ANTVersions[tostring(version)] = {
+			messageId = msg.Id,
+			moduleId = moduleId,
+			luaSourceId = luaSourceId,
+			notes = notes,
+			releaseDate = releaseDate,
+		}
 
 		ao.send({
 			Target = msg.From,
