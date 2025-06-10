@@ -66,19 +66,32 @@ const fetchAllArNSProcessIds = async () => {
 
 const fetchAllProcessIdsInRegistry = async () => {
   console.log('Fetching unregistered ants from registry...');
-  const antRegistryAntsRes = await ao.dryrun({
-    process: registryId,
-    From: vaotId,
-    Owner: vaotId,
-    data: "print(require('json').encode(require('.utils').keys(ANTS)))",
-    tags: [
-      {
-        name: 'Action',
-        value: 'Eval',
-      },
-    ],
-  });
-  const antRegistryAnts = JSON.parse(antRegistryAntsRes.Output.data);
+  let retries = 0;
+  let result = null;
+  while (retries < 5) {
+    try {
+      result = await ao.dryrun({
+        process: registryId,
+        From: vaotId,
+        Owner: vaotId,
+        data: "print(require('json').encode(require('.utils').keys(ANTS)))",
+        tags: [
+          {
+            name: 'Action',
+            value: 'Eval',
+          },
+        ],
+      });
+      break;
+    } catch (error) {
+      retries++;
+      await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** retries));
+    }
+  }
+  if (!result) {
+    throw new Error(`Failed to fetch unregistered ANTs`);
+  }
+  const antRegistryAnts = JSON.parse(result.Output.data);
   return Array.from(antRegistryAnts);
 };
 

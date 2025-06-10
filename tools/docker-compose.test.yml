@@ -2,6 +2,7 @@ services:
   ao-cu:
     image: ghcr.io/permaweb/ao-cu:latest
     volumes:
+      - ./ci-cache/ao-cu-data:/usr/app
       - ${CU_WALLET_FILE:-./test-wallet.json}:/usr/app/test-wallet.json
     ports:
       - ${CU_PORT:-6363}:${CU_PORT:-6363}
@@ -14,3 +15,6 @@ services:
       GRAPHQL_URL: ${GRAPHQL_URL:-https://arweave.net/graphql}
       CHECKPOINT_GRAPHQL_URL: ${CHECKPOINT_GRAPHQL_URL:-https://arweave.net/graphql}
       PROCESS_WASM_MEMORY_MAX_LIMIT: ${PROCESS_WASM_MEMORY_MAX_LIMIT:-17179869184}
+      WASM_BINARY_FILE_DIRECTORY: /usr/app/wasm-binaries
+      PROCESS_MEMORY_CACHE_FILE_DIR: /usr/app/memory-cache
+      PROCESS_MEMORY_FILE_CHECKPOINTS_DIR: /usr/app/checkpoints
