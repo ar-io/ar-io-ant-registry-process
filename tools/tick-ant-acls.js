@@ -103,8 +103,8 @@ async function main() {
     projectRootPath,
     'tools/docker-compose.test.yml',
   )
-    .withWaitStrategy('ao-cu-1', Wait.forHttp(`/state/${registryId}`, 6363))
-    .withWaitStrategy('ao-cu-1', Wait.forHttp(`/state/${arioProcessId}`, 6363))
+    .withWaitStrategy('ao-cu', Wait.forHttp(`/state/${registryId}`, 6363))
+    .withWaitStrategy('ao-cu', Wait.forHttp(`/state/${arioProcessId}`, 6363))
     .withStartupTimeout(45 * 60_000) // 45 minutes - cu from scratch can take 15 minutes per process and we have 2.
     .up();
 
