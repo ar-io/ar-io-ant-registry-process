@@ -84,6 +84,7 @@ const fetchAllProcessIdsInRegistry = async () => {
       });
       break;
     } catch (error) {
+      console.error(error);
       retries++;
       await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** retries));
     }
