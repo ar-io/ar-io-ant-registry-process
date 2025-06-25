@@ -46,6 +46,19 @@ main.init = function()
 		local ant = utils.parseAntState(msg.Data)
 		-- we pass in the reference as the state nonce
 		utils.updateAffiliations(msg.From, ant, ADDRESSES, ANTS, tonumber(msg.Reference))
+
+		local acl = {
+			[ant.Owner] = utils.affiliationsForAddress(ant.Owner, ANTS),
+		}
+
+		for controller, _ in pairs(ANTS[msg.From].Controllers) do
+			acl[controller] = utils.affiliationsForAddress(controller, ANTS)
+		end
+
+		ao.send({
+			device = "patch@1.0",
+			acl,
+		})
 	end)
 
 	utils.createActionHandler(ActionMap.AccessControlList, function(msg)
