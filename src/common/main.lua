@@ -57,7 +57,7 @@ main.init = function()
 
 		ao.send({
 			device = "patch@1.0",
-			acl,
+			cache = { acl = acl },
 		})
 	end)
 
