@@ -3,7 +3,7 @@ name: ANT Registration Watchdog
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 * * * *' # Run every hour
+    - cron: '0 */6 * * *' # Run once every 6 hours
 
 jobs:
   monitor:

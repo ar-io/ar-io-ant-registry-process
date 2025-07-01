@@ -21,7 +21,8 @@ const vaotId =
   process.env.VAOT_ID ?? '4Ko7JmGPtbKLLqctNFr6ukWqX0lt4l0ktXgYKyMlbsM';
 const arioProcessId =
   process.env.ARIO_PROCESS_ID ?? 'qNvAoz0TgcH7DMg8BCVn8jF32QH5L6T29VjHxhHqqGE';
-const cuUrl = process.env.CU_URL ?? 'http://localhost:6363';
+// const cuUrl = process.env.CU_URL ?? 'http://localhost:6363';
+const cuUrl = process.env.CU_URL ?? 'https://cu.ardrive.io';
 const graphqlUrl = process.env.GRAPHQL_URL ?? 'https://arweave.net/graphql';
 
 const ao = connect({
@@ -79,19 +80,20 @@ const fetchAllProcessIdsInRegistry = async () => {
     ],
   });
   const antRegistryAnts = JSON.parse(antRegistryAntsRes.Output.data);
+  console.log(`Found ${antRegistryAnts.length} ANTs in registry`);
   return Array.from(antRegistryAnts);
 };
 
 async function main() {
   console.log('Spinning up ao-cu...');
-  const compose = await new DockerComposeEnvironment(
-    projectRootPath,
-    'tools/docker-compose.test.yml',
-  )
-    .withWaitStrategy('ao-cu-1', Wait.forHttp(`/state/${registryId}`, 6363))
-    .withWaitStrategy('ao-cu-1', Wait.forHttp(`/state/${arioProcessId}`, 6363))
-    .withStartupTimeout(30 * 60_000) // 30 minutes
-    .up();
+  // const compose = await new DockerComposeEnvironment(
+  //   projectRootPath,
+  //   'tools/docker-compose.test.yml',
+  // )
+  //   .withWaitStrategy('ao-cu-1', Wait.forHttp(`/state/${registryId}`, 6363))
+  //   .withWaitStrategy('ao-cu-1', Wait.forHttp(`/state/${arioProcessId}`, 6363))
+  //   .withStartupTimeout(30 * 60_000) // 30 minutes
+  //   .up();
 
   console.log('Local CU ready!');
 
@@ -101,7 +103,7 @@ async function main() {
       fetchAllProcessIdsInRegistry(),
     ]);
 
-    const antsToRegister = processIdsForNames.filter(
+    const antsToRegister = Array.from(processIdsForNames).filter(
       (antId) => !processIdsInRegistry.includes(antId),
     );
     console.log(`Found ${antsToRegister.length} ANTs to register`);
@@ -117,11 +119,11 @@ async function main() {
       ),
     );
   } catch (error) {
-    await compose.down();
+    // await compose.down();
     console.error(error);
     process.exit(1);
   } finally {
-    await compose.down();
+    //  await compose.down();
     console.log('Done');
     process.exit(0);
   }
