@@ -49,10 +49,11 @@ main.init = function()
 		assert(ANTS[antId], "ANT " .. antId .. " does not exist")
 
 		local antOwner = ANTS[antId].Owner
-		local isOwner = antOwner == msg.From
+		local isAntOwner = antOwner == msg.From
+		local isRegistryOwner = msg.From == Owner or msg.From == ao.id
 		local isAnt = antId == msg.From
 		-- Should allow flexibility while protecting against attacks deregistering other peoples assets.
-		assert(isOwner or isAnt, "Only ANT owner or ANT can unregister")
+		assert(isAntOwner or isAnt or isRegistryOwner, "Only ANT owner, ANT, or registry owner, or ao.id can unregister")
 
 		ADDRESSES[antOwner][antId] = nil
 		for controller, _ in pairs(ANTS[antId].Controllers) do
