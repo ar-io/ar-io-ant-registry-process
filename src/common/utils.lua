@@ -349,4 +349,23 @@ function utils.validateArweaveId(address)
 	return type(address) == "string" and #address == 43 and string.match(address, "^[%w-_]+$") ~= nil
 end
 
+function utils.unregisterAnt(caller, ants, antId, addresses)
+	assert(type(antId) == "string", "Process-Id is required")
+	assert(ants[antId], "ANT " .. antId .. " does not exist")
+
+	local antOwner = ants[antId].Owner
+	local isAntOwner = antOwner == caller
+	local isRegistryOwner = caller == Owner or caller == ao.id
+	local isAnt = antId == caller
+	-- Should allow flexibility while protecting against attacks deregistering other peoples assets.
+	assert(isAntOwner or isAnt or isRegistryOwner, "Only ANT owner, ANT, or registry owner, or ao.id can unregister")
+
+	-- Remove from ADDRESSES table
+	addresses[antOwner][antId] = nil
+	for controller, _ in pairs(ants[antId].Controllers) do
+		addresses[controller][antId] = nil
+	end
+	ants[antId] = nil
+end
+
 return utils

@@ -44,23 +44,7 @@ main.init = function()
 	end)
 
 	utils.createActionHandler(ActionMap.Unregister, function(msg)
-		local antId = msg.Tags["Process-Id"]
-		assert(type(antId) == "string", "Process-Id is required")
-		assert(ANTS[antId], "ANT " .. antId .. " does not exist")
-
-		local antOwner = ANTS[antId].Owner
-		local isAntOwner = antOwner == msg.From
-		local isRegistryOwner = msg.From == Owner or msg.From == ao.id
-		local isAnt = antId == msg.From
-		-- Should allow flexibility while protecting against attacks deregistering other peoples assets.
-		assert(isAntOwner or isAnt or isRegistryOwner, "Only ANT owner, ANT, or registry owner, or ao.id can unregister")
-
-		ADDRESSES[antOwner][antId] = nil
-		for controller, _ in pairs(ANTS[antId].Controllers) do
-			ADDRESSES[controller][antId] = nil
-		end
-		ANTS[antId] = nil
-
+		utils.unregisterAnt(msg.From, ANTS, msg.Tags["Process-Id"], ADDRESSES)
 		ao.send({
 			Target = msg.From,
 			Action = "Unregister-Notice",
