@@ -141,6 +141,7 @@ describe("utils.lua", function()
 			-- Create ANT with only owner, no controllers
 			ants[antId] = {
 				Owner = antOwner,
+				Controllers = {},
 			}
 
 			utils.unregisterAnt(antOwner, ants, antId, addresses)
