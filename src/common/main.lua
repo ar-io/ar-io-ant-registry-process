@@ -4,18 +4,30 @@ local main = {}
 -- just to ignore lint warnings
 local ao = ao or {}
 
+---@alias ACL { Owned: string[], Controlled: string[] }
+---@alias ACLMap {[string]: ACL}
+---@alias ANT { Owner: string, Controllers: {[string]: boolean} }
+---@alias ANTMap {[string]: ANT}
+---@alias AddressMap {[string]: {[string]: boolean}}
+---@alias VersionMap {[string]: { messageId: string, moduleId: string, luaSourceId: string, notes: string }}
+
 main.init = function()
 	-- Example ANT structure
 	-- ANTS["antId"] = {
 	--     Owner = "userId",
 	--     Controllers = {"userId1" = true, "userId2" = true},
 	-- }
+	---@type ANTMap
 	ANTS = ANTS or {}
 
 	-- Example ADDRESSES structure - maps a user address to a table keyed on ANT process IDs
 	-- ADDRESSES["userAddress"] = {"antProcessId1" = true, "antProcessId2" = true}
+	---@type AddressMap
 	ADDRESSES = ADDRESSES or {}
 
+	-- Example ANTVersions structure - maps a version number to a table with the messageId, moduleId, luaSourceId, and notes
+	-- ANTVersions["1"] = { messageId = "messageId1", moduleId = "moduleId1", luaSourceId = "luaSourceId1", notes = "notes1" }
+	---@type VersionMap
 	ANTVersions = ANTVersions or {}
 
 	local ActionMap = {
@@ -56,6 +68,14 @@ main.init = function()
 		local ant = utils.parseAntState(msg.Data)
 		-- we pass in the reference as the state nonce
 		utils.updateAffiliations(msg.From, ant, ADDRESSES, ANTS, tonumber(msg.Reference))
+
+		-- this may need to be batched for operation within limits of hyperbeam messages, specifically http header size
+		local acl = utils.affiliationsForAnt(msg.From, ANTS)
+
+		ao.send({
+			device = "patch@1.0",
+			cache = { acl = acl },
+		})
 	end)
 
 	utils.createActionHandler(ActionMap.AccessControlList, function(msg)

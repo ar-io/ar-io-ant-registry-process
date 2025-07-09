@@ -50,10 +50,11 @@ describe('ANT Registration Cases', async () => {
       From: antId,
       Owner: antId,
     });
-
-    // if we have messages in this case we have errors
-
-    assert.strictEqual(stateNoticeResult.Messages.length, 0);
+    const hbPatchMessage = stateNoticeResult.Messages.at(0);
+    assert(
+      hbPatchMessage && hbPatchMessage.Tags.find((t) => t.name === 'device'),
+      'missing HyperBEAM acl update',
+    );
 
     const allAntsResult = await sendMessage(
       {
@@ -192,8 +193,12 @@ describe('ANT Registration Cases', async () => {
       failedUpdate.Memory,
     );
 
-    // Should not have any error messages
-    assert.strictEqual(successUpdate.Messages.length, 0);
+    // should have a hb patch message
+    const hbPatchMessage = successUpdate.Messages.at(0);
+    assert(
+      hbPatchMessage && hbPatchMessage.Tags.find((t) => t.name === 'device'),
+      'missing HyperBEAM acl update',
+    );
   });
 
   it('should handle unregister functionality correctly', async () => {
