@@ -580,15 +580,12 @@ describe('ANT Registration Cases', async () => {
       Records: {},
     });
 
-    const stateNoticeResult = await sendMessage(
-      {
-        Tags: [{ name: 'Action', value: 'State-Notice' }],
-        Data: stateData,
-        From: antId,
-        Owner: antId,
-      },
-      registerResult.Memory,
-    );
+    const stateNoticeResult = await sendMessage({
+      Tags: [{ name: 'Action', value: 'State-Notice' }],
+      Data: stateData,
+      From: antId,
+      Owner: antId,
+    });
 
     // Try to unregister with controller address (not owner)
     const unregisterResult = await sendMessage(
