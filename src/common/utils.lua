@@ -231,6 +231,7 @@ function utils.updateAffiliations(antId, newAnt, addresses, ants, currentReferen
 	-- Remove previous affiliations for old owner and controllers
 	local maybeOldAnt = ants[antId]
 	local newAffliates = utils.affiliatesForAnt(newAnt)
+	local affiliatesToRemoveAntIdFrom = {}
 
 	-- Remove stale address affiliations
 	if maybeOldAnt ~= nil then
@@ -242,6 +243,7 @@ function utils.updateAffiliations(antId, newAnt, addresses, ants, currentReferen
 		local oldAffliates = utils.affiliatesForAnt(maybeOldAnt)
 		for oldAffliate, _ in pairs(oldAffliates) do
 			if not newAffliates[oldAffliate] and addresses[oldAffliate] then
+				table.insert(affiliatesToRemoveAntIdFrom, oldAffliate)
 				addresses[oldAffliate][antId] = nil
 			end
 		end
@@ -262,6 +264,10 @@ function utils.updateAffiliations(antId, newAnt, addresses, ants, currentReferen
 		ants[antId] = newAnt
 		ants[antId].lastReference = currentReference
 	end
+
+	return {
+		affiliatesToRemoveAntIdFrom = affiliatesToRemoveAntIdFrom,
+	}
 end
 
 function utils.errorHandler(err)
