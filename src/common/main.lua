@@ -62,6 +62,12 @@ main.init = function()
 			Action = "Unregister-Notice",
 			["Message-Id"] = msg.Id,
 		})
+		local acl = utils.affiliationsForAnt(msg.From, ANTS)
+
+		ao.send({
+			device = "patch@1.0",
+			cache = { acl = acl },
+		})
 	end)
 
 	utils.createActionHandler(ActionMap.StateNotice, function(msg)
