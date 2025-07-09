@@ -203,7 +203,6 @@ describe('ANT Registration Cases', async () => {
 
   it('should handle unregister functionality correctly', async () => {
     const antId = ''.padEnd(43, 'unregister-test-ant-id');
-    const differentAddress = ''.padEnd(43, 'different-address');
 
     // First, register an ANT
     const stateData = JSON.stringify({
@@ -259,13 +258,20 @@ describe('ANT Registration Cases', async () => {
       },
       stateNoticeResult.Memory,
     );
-
+    console.dir(unregisterResult.Messages, { depth: null });
     // Should send Unregister-Notice
-    assert.strictEqual(unregisterResult.Messages.length, 1);
+    assert.strictEqual(unregisterResult.Messages.length, 2);
     const unregisterNotice = unregisterResult.Messages[0].Tags.find(
       (tag) => tag.name === 'Action',
     );
     assert.strictEqual(unregisterNotice.value, 'Unregister-Notice');
+
+    // Should also send HyperBEAM patch message
+    const hbPatchMessage = unregisterResult.Messages[1];
+    assert(
+      hbPatchMessage && hbPatchMessage.Tags.find((t) => t.name === 'device'),
+      'missing HyperBEAM acl update',
+    );
 
     // Verify ANT is no longer in affiliations
     const affiliationsAfter = await sendMessage(
@@ -326,12 +332,18 @@ describe('ANT Registration Cases', async () => {
     );
 
     // Should send Unregister-Notice
-    assert.strictEqual(unregisterResult.Messages.length, 1);
+    assert.strictEqual(unregisterResult.Messages.length, 2);
     const unregisterNotice = unregisterResult.Messages[0].Tags.find(
       (tag) => tag.name === 'Action',
     );
-
     assert.strictEqual(unregisterNotice.value, 'Unregister-Notice');
+
+    // Should also send HyperBEAM patch message
+    const hbPatchMessage = unregisterResult.Messages[1];
+    assert(
+      hbPatchMessage && hbPatchMessage.Tags.find((t) => t.name === 'device'),
+      'missing HyperBEAM acl update',
+    );
 
     // Verify ANT is no longer in affiliations
     const affiliationsAfter = await sendMessage(

@@ -21,4 +21,9 @@ _G.Handlers = {
 	},
 }
 
+-- Global variables needed for utils functions
+_G.ADDRESSES = {}
+_G.ANTS = {}
+_G.Owner = "test-owner-123456789012345678901234567890123456789"
+
 print("Setup global ao mocks successfully...")

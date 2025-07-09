@@ -386,4 +386,27 @@ function utils.unregisterAnt(caller, ants, antId, addresses)
 	ants[antId] = nil
 end
 
+---@param antId string
+---@param ants ANTMap
+---@return ACLMap
+function utils.patchAffiliationsForAnt(antId, ants)
+	local aclMap = utils.affiliationsForAnt(antId, ants)
+	for user, _ in pairs(aclMap) do
+		-- remove ant from owned
+		for i, processId in ipairs(aclMap[user].Owned) do
+			if processId == antId then
+				table.remove(aclMap[user].Owned, i)
+			end
+		end
+
+		-- remove ant from controllers
+		for i, processId in ipairs(aclMap[user].Controlled) do
+			if processId == antId then
+				table.remove(aclMap[user].Controlled, i)
+			end
+		end
+	end
+	return aclMap
+end
+
 return utils
