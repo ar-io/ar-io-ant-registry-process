@@ -560,4 +560,63 @@ describe('ANT Registration Cases', async () => {
     const ownedAntsAfter = JSON.parse(affiliationsAfter.Messages[0].Data);
     assert.strictEqual(ownedAntsAfter.Owned.length, 0);
   });
+
+  it('should fail to unregister ANT by controller (not owner)', async () => {
+    const antId = ''.padEnd(43, 'controller-unregister-test');
+    const controllerAddress = ''.padEnd(43, 'controller-address');
+
+    // Register an ANT with a controller that is not the owner
+    const stateData = JSON.stringify({
+      Owner: STUB_ADDRESS,
+      Controllers: [controllerAddress],
+      Balances: {},
+      Name: 'ControllerTest',
+      Ticker: 'CT',
+      Records: {},
+    });
+
+    const stateNoticeResult = await sendMessage(
+      {
+        Tags: [{ name: 'Action', value: 'State-Notice' }],
+        Data: stateData,
+        From: antId,
+        Owner: antId,
+      },
+      registerResult.Memory,
+    );
+
+    // Try to unregister with controller address (not owner)
+    const unregisterResult = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Unregister' },
+          { name: 'Process-Id', value: antId },
+        ],
+        From: controllerAddress,
+        Owner: controllerAddress,
+      },
+      stateNoticeResult.Memory,
+    );
+
+    // Should have an error message
+    assert.strictEqual(unregisterResult.Messages.length, 1);
+    const errorAction = unregisterResult.Messages[0].Tags.find(
+      (tag) => tag.name === 'Action',
+    );
+    assert.strictEqual(errorAction.value, 'Invalid-Unregister-Notice');
+
+    // Verify ANT is still registered
+    const affiliationsAfter = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Access-Control-List' },
+          { name: 'Address', value: STUB_ADDRESS },
+        ],
+      },
+      unregisterResult.Memory,
+    );
+
+    const ownedAntsAfter = JSON.parse(affiliationsAfter.Messages[0].Data);
+    assert.strictEqual(ownedAntsAfter.Owned[0], antId);
+  });
 });
