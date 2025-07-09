@@ -491,7 +491,7 @@ describe('ANT Registration Cases', async () => {
     );
 
     // Should send Unregister-Notice
-    assert.strictEqual(unregisterResult.Messages.length, 1);
+    assert.strictEqual(unregisterResult.Messages.length, 2);
     const unregisterNotice = unregisterResult.Messages[0].Tags.find(
       (tag) => tag.name === 'Action',
     );
@@ -557,7 +557,7 @@ describe('ANT Registration Cases', async () => {
     );
 
     // Should send Unregister-Notice
-    assert.strictEqual(unregisterResult.Messages.length, 1);
+    assert.strictEqual(unregisterResult.Messages.length, 2);
     const unregisterNotice = unregisterResult.Messages[0].Tags.find(
       (tag) => tag.name === 'Action',
     );
