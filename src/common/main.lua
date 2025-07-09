@@ -82,8 +82,6 @@ main.init = function()
 		local updateResult = utils.updateAffiliations(msg.From, ant, ADDRESSES, ANTS, tonumber(msg.Reference))
 		local affiliatesToRemoveAntIdFrom = updateResult.affiliatesToRemoveAntIdFrom
 
-		print(json.encode(affiliatesToRemoveAntIdFrom))
-
 		-- this may need to be batched for operation within limits of hyperbeam messages, specifically http header size
 		local aclMap = utils.affiliationsForAnt(msg.From, ANTS)
 
