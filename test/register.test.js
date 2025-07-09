@@ -46,7 +46,6 @@ describe('ANT Registration Cases', async () => {
       From: antId,
       Owner: antId,
     });
-
     const hbPatchMessage = stateNoticeResult.Messages.at(0);
     assert(
       hbPatchMessage && hbPatchMessage.Tags.find((t) => t.name === 'device'),
