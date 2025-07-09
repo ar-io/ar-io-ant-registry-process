@@ -146,7 +146,7 @@ describe("utils.lua", function()
 
 			assert.has_error(function()
 				utils.unregisterAnt(antOwner, ants, nonExistentAntId, addresses)
-			end, "ANT " .. nonExistentAntId .. " does not exist")
+			end, "Unable to unregister ANT " .. nonExistentAntId .. " because it does not exist")
 		end)
 
 		it("should throw error when called by unauthorized user", function()

@@ -258,7 +258,7 @@ describe('ANT Registration Cases', async () => {
       },
       stateNoticeResult.Memory,
     );
-    console.dir(unregisterResult.Messages, { depth: null });
+
     // Should send Unregister-Notice
     assert.strictEqual(unregisterResult.Messages.length, 2);
     const unregisterNotice = unregisterResult.Messages[0].Tags.find(
