@@ -350,6 +350,7 @@ end
 ---@param processId string
 ---@return ACLMap
 function utils.affiliationsForAnt(processId, ants)
+	assert(ants[processId], "Unable to get affiliations for ANT " .. processId .. " because it does not exist")
 	---@type ACLMap
 	local affiliations = {}
 	affiliations[ants[processId].Owner] = utils.affiliationsForAddress(ants[processId].Owner, ants)
@@ -369,7 +370,7 @@ end
 
 function utils.unregisterAnt(caller, ants, antId, addresses)
 	assert(type(antId) == "string", "Process-Id is required")
-	assert(ants[antId], "ANT " .. antId .. " does not exist")
+	assert(ants[antId], "Unable to unregister ANT " .. antId .. " because it does not exist")
 
 	local antOwner = ants[antId].Owner
 	local isAntOwner = antOwner == caller
