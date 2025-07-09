@@ -57,14 +57,26 @@ main.init = function()
 	utils.createActionHandler(ActionMap.StateNotice, function(msg)
 		local ant = utils.parseAntState(msg.Data)
 		-- we pass in the reference as the state nonce
-		utils.updateAffiliations(msg.From, ant, ADDRESSES, ANTS, tonumber(msg.Reference))
+		local updateResult = utils.updateAffiliations(msg.From, ant, ADDRESSES, ANTS, tonumber(msg.Reference))
+		local affiliatesToRemoveAntIdFrom = updateResult.affiliatesToRemoveAntIdFrom
+
+		print(json.encode(affiliatesToRemoveAntIdFrom))
 
 		-- this may need to be batched for operation within limits of hyperbeam messages, specifically http header size
-		local acl = utils.affiliationsForAnt(msg.From, ANTS)
+		local aclMap = utils.affiliationsForAnt(msg.From, ANTS)
+
+		for _, affiliate in ipairs(affiliatesToRemoveAntIdFrom) do
+			aclMap[affiliate] = utils.affiliationsForAddress(affiliate, ANTS)
+			-- TODO: DELETE the ant from the affiliations on the address mapping. Currently do not know how to do this, or if its even possible with the current state of patch@1.0\
+			-- this will set the mapping to { Owned: [], Controlled: [] } in the hb state
+
+			-- aclMap[affiliate].Owned[utils.indexOf(aclMap[affiliate].Owned, msg.From)] = nil
+			-- aclMap[affiliate].Controlled[utils.indexOf(aclMap[affiliate].Controlled, msg.From)] = nil
+		end
 
 		ao.send({
 			device = "patch@1.0",
-			cache = { acl = acl },
+			cache = { acl = aclMap },
 		})
 	end)
 
