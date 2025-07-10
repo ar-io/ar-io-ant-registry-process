@@ -231,6 +231,7 @@ function utils.updateAffiliations(antId, newAnt, addresses, ants, currentReferen
 	-- Remove previous affiliations for old owner and controllers
 	local maybeOldAnt = ants[antId]
 	local newAffliates = utils.affiliatesForAnt(newAnt)
+	local affiliatesToRemoveAntIdFrom = {}
 
 	-- Remove stale address affiliations
 	if maybeOldAnt ~= nil then
@@ -242,6 +243,7 @@ function utils.updateAffiliations(antId, newAnt, addresses, ants, currentReferen
 		local oldAffliates = utils.affiliatesForAnt(maybeOldAnt)
 		for oldAffliate, _ in pairs(oldAffliates) do
 			if not newAffliates[oldAffliate] and addresses[oldAffliate] then
+				table.insert(affiliatesToRemoveAntIdFrom, oldAffliate)
 				addresses[oldAffliate][antId] = nil
 			end
 		end
@@ -262,6 +264,10 @@ function utils.updateAffiliations(antId, newAnt, addresses, ants, currentReferen
 		ants[antId] = newAnt
 		ants[antId].lastReference = currentReference
 	end
+
+	return {
+		affiliatesToRemoveAntIdFrom = affiliatesToRemoveAntIdFrom,
+	}
 end
 
 function utils.errorHandler(err)
@@ -327,7 +333,11 @@ function utils.affiliatesForAnt(ant)
 	return affliates
 end
 
+---@param address string
+---@param ants ANTMap
+---@return ACL
 function utils.affiliationsForAddress(address, ants)
+	---@type ACL
 	local affiliations = {
 		Owned = {},
 		Controlled = {},
@@ -339,6 +349,20 @@ function utils.affiliationsForAddress(address, ants)
 			table.insert(affiliations.Controlled, antId)
 		end
 	end
+	return affiliations
+end
+
+---@param ants ANTMap
+---@param processId string
+---@return ACLMap
+function utils.affiliationsForAnt(processId, ants)
+	---@type ACLMap
+	local affiliations = {}
+	affiliations[ants[processId].Owner] = utils.affiliationsForAddress(ants[processId].Owner, ants)
+	for controller, _ in pairs(ants[processId].Controllers) do
+		affiliations[controller] = utils.affiliationsForAddress(controller, ants)
+	end
+
 	return affiliations
 end
 
