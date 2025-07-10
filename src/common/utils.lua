@@ -399,19 +399,23 @@ end
 function utils.generateAffiliationsDelta(antId, ants)
 	local aclMap = utils.affiliationsForAnt(antId, ants)
 	for user, _ in pairs(aclMap) do
-		-- remove ant from owned
-		for i, processId in ipairs(aclMap[user].Owned) do
-			if processId == antId then
-				table.remove(aclMap[user].Owned, i)
+		-- remove ant from owned using filter approach
+		local filteredOwned = {}
+		for _, processId in ipairs(aclMap[user].Owned) do
+			if processId ~= antId then
+				table.insert(filteredOwned, processId)
 			end
 		end
+		aclMap[user].Owned = filteredOwned
 
-		-- remove ant from controllers
-		for i, processId in ipairs(aclMap[user].Controlled) do
-			if processId == antId then
-				table.remove(aclMap[user].Controlled, i)
+		-- remove ant from controllers using filter approach
+		local filteredControlled = {}
+		for _, processId in ipairs(aclMap[user].Controlled) do
+			if processId ~= antId then
+				table.insert(filteredControlled, processId)
 			end
 		end
+		aclMap[user].Controlled = filteredControlled
 	end
 	return aclMap
 end
