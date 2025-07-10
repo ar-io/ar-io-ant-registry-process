@@ -60,7 +60,7 @@ main.init = function()
 		assert(type(antId) == "string", "Process-Id is required")
 
 		-- generate the acl here so we can path to the relevant addresses in the mappings
-		local acl = utils.patchAffiliationsForAnt(antId, ANTS)
+		local acl = utils.generateAffiliationsDelta(antId, ANTS)
 
 		utils.unregisterAnt(msg.From, ANTS, antId, ADDRESSES)
 		ao.send({

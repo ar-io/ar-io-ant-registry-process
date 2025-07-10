@@ -196,7 +196,7 @@ describe("utils.lua", function()
 		end)
 	end)
 
-	describe("utils.patchAffiliationsForAnt", function()
+	describe("utils.generateAffiliationsDelta", function()
 		local ants, antId, antOwner, controller1, controller2
 
 		before_each(function()
@@ -244,7 +244,7 @@ describe("utils.lua", function()
 			_G.ADDRESSES[controller2] = { [antId] = true, [otherAntId2] = true }
 			_G.ADDRESSES[otherAntId1] = {}
 
-			local result = utils.patchAffiliationsForAnt(antId, ants)
+			local result = utils.generateAffiliationsDelta(antId, ants)
 
 			-- Verify the result structure
 			assert.is_not_nil(result)
@@ -310,7 +310,7 @@ describe("utils.lua", function()
 			_G.ADDRESSES[antOwner] = { [antId] = true }
 			_G.ADDRESSES[controller1] = { [antId] = true, [otherAntId] = true }
 
-			local result = utils.patchAffiliationsForAnt(antId, ants)
+			local result = utils.generateAffiliationsDelta(antId, ants)
 
 			-- Verify the result structure
 			assert.is_not_nil(result)
@@ -359,7 +359,7 @@ describe("utils.lua", function()
 			_G.ADDRESSES[controller1] = { [antId] = true, [otherAntId] = true }
 			_G.ADDRESSES[controller2] = { [antId] = true }
 
-			local result = utils.patchAffiliationsForAnt(antId, ants)
+			local result = utils.generateAffiliationsDelta(antId, ants)
 
 			-- Verify the target ANT is completely removed from all affiliations
 			for user, affiliations in pairs(result) do
@@ -394,7 +394,7 @@ describe("utils.lua", function()
 			_G.ADDRESSES[antOwner] = { [antId] = true }
 			_G.ADDRESSES[controller1] = { [antId] = true }
 
-			local result = utils.patchAffiliationsForAnt(antId, ants)
+			local result = utils.generateAffiliationsDelta(antId, ants)
 
 			-- Verify the result structure
 			assert.is_not_nil(result)

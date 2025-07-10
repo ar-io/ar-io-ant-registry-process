@@ -396,7 +396,7 @@ end
 ---@param antId string
 ---@param ants ANTMap
 ---@return ACLMap
-function utils.patchAffiliationsForAnt(antId, ants)
+function utils.generateAffiliationsDelta(antId, ants)
 	local aclMap = utils.affiliationsForAnt(antId, ants)
 	for user, _ in pairs(aclMap) do
 		-- remove ant from owned
