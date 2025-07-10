@@ -32,6 +32,7 @@ main.init = function()
 
 	local ActionMap = {
 		Register = "Register",
+		Unregister = "Unregister",
 		StateNotice = "State-Notice",
 		AccessControlList = "Access-Control-List",
 		AddVersion = "Add-Version",
@@ -51,6 +52,27 @@ main.init = function()
 			Target = msg.From,
 			Action = "Register-Notice",
 			["Message-Id"] = msg.Id,
+		})
+	end)
+
+	utils.createActionHandler(ActionMap.Unregister, function(msg)
+		local antId = msg.Tags["Process-Id"]
+		assert(type(antId) == "string", "Process-Id is required")
+
+		-- generate the acl here so we can path to the relevant addresses in the mappings
+		local acl = utils.generateAffiliationsDelta(antId, ANTS)
+
+		utils.unregisterAnt(msg.From, ANTS, antId, ADDRESSES)
+		ao.send({
+			Target = msg.From,
+			Action = "Unregister-Notice",
+			["Message-Id"] = msg.Id,
+		})
+		-- Send HyperBEAM patch message with updated ACL that has the ant removed
+
+		ao.send({
+			device = "patch@1.0",
+			cache = { acl = acl },
 		})
 	end)
 

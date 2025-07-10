@@ -356,6 +356,7 @@ end
 ---@param processId string
 ---@return ACLMap
 function utils.affiliationsForAnt(processId, ants)
+	assert(ants[processId], "Unable to get affiliations for ANT " .. processId .. " because it does not exist")
 	---@type ACLMap
 	local affiliations = {}
 	affiliations[ants[processId].Owner] = utils.affiliationsForAddress(ants[processId].Owner, ants)
@@ -371,6 +372,52 @@ end
 --- @return boolean isValidArweaveAddress - whether the address is a valid Arweave address
 function utils.validateArweaveId(address)
 	return type(address) == "string" and #address == 43 and string.match(address, "^[%w-_]+$") ~= nil
+end
+
+function utils.unregisterAnt(caller, ants, antId, addresses)
+	assert(type(antId) == "string", "Process-Id is required")
+	assert(ants[antId], "Unable to unregister ANT " .. antId .. " because it does not exist")
+
+	local antOwner = ants[antId].Owner
+	local isAntOwner = antOwner == caller
+	local isRegistryOwner = caller == Owner or caller == ao.id
+	local isAnt = antId == caller
+	-- Should allow flexibility while protecting against attacks deregistering other peoples assets.
+	assert(isAntOwner or isAnt or isRegistryOwner, "Only ANT owner, ANT, or registry owner, or ao.id can unregister")
+
+	-- Remove from ADDRESSES table
+	addresses[antOwner][antId] = nil
+	for controller, _ in pairs(ants[antId].Controllers) do
+		addresses[controller][antId] = nil
+	end
+	ants[antId] = nil
+end
+
+---@param antId string
+---@param ants ANTMap
+---@return ACLMap
+function utils.generateAffiliationsDelta(antId, ants)
+	local aclMap = utils.affiliationsForAnt(antId, ants)
+	for user, _ in pairs(aclMap) do
+		-- remove ant from owned using filter approach
+		local filteredOwned = {}
+		for _, processId in ipairs(aclMap[user].Owned) do
+			if processId ~= antId then
+				table.insert(filteredOwned, processId)
+			end
+		end
+		aclMap[user].Owned = filteredOwned
+
+		-- remove ant from controllers using filter approach
+		local filteredControlled = {}
+		for _, processId in ipairs(aclMap[user].Controlled) do
+			if processId ~= antId then
+				table.insert(filteredControlled, processId)
+			end
+		end
+		aclMap[user].Controlled = filteredControlled
+	end
+	return aclMap
 end
 
 return utils
