@@ -17,14 +17,18 @@ describe('ANT Registration Cases', async () => {
     startMemory = loader.memory;
   });
 
-  async function sendMessage(options = {}, mem = startMemory) {
+  async function sendMessage(
+    options = {},
+    mem = startMemory,
+    env = AO_LOADER_HANDLER_ENV,
+  ) {
     return handle(
       mem,
       {
         ...DEFAULT_HANDLE_OPTIONS,
         ...options,
       },
-      AO_LOADER_HANDLER_ENV,
+      env,
     );
   }
 
@@ -46,10 +50,11 @@ describe('ANT Registration Cases', async () => {
       From: antId,
       Owner: antId,
     });
-
-    // if we have messages in this case we have errors
-
-    assert.strictEqual(stateNoticeResult.Messages.length, 0);
+    const hbPatchMessage = stateNoticeResult.Messages.at(0);
+    assert(
+      hbPatchMessage && hbPatchMessage.Tags.find((t) => t.name === 'device'),
+      'missing HyperBEAM acl update',
+    );
 
     const allAntsResult = await sendMessage(
       {
@@ -188,7 +193,444 @@ describe('ANT Registration Cases', async () => {
       failedUpdate.Memory,
     );
 
-    // Should not have any error messages
-    assert.strictEqual(successUpdate.Messages.length, 0);
+    // should have a hb patch message
+    const hbPatchMessage = successUpdate.Messages.at(0);
+    assert(
+      hbPatchMessage && hbPatchMessage.Tags.find((t) => t.name === 'device'),
+      'missing HyperBEAM acl update',
+    );
+  });
+
+  it('should handle unregister functionality correctly', async () => {
+    const antId = ''.padEnd(43, 'unregister-test-ant-id');
+
+    // First, register an ANT
+    const stateData = JSON.stringify({
+      Owner: STUB_ADDRESS,
+      Controllers: [STUB_ADDRESS],
+      Balances: {},
+      Name: 'UnregisterTest',
+      Ticker: 'UNT',
+      Records: {},
+    });
+
+    // Register the ANT
+    const registerResult = await sendMessage({
+      Tags: [
+        { name: 'Action', value: 'Register' },
+        { name: 'Process-Id', value: antId },
+      ],
+    });
+
+    // Send state notice to complete registration
+    const stateNoticeResult = await sendMessage(
+      {
+        Tags: [{ name: 'Action', value: 'State-Notice' }],
+        Data: stateData,
+        From: antId,
+        Owner: antId,
+      },
+      registerResult.Memory,
+    );
+
+    // Verify ANT is registered by checking affiliations
+    const affiliationsBefore = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Access-Control-List' },
+          { name: 'Address', value: STUB_ADDRESS },
+        ],
+      },
+      stateNoticeResult.Memory,
+    );
+
+    const ownedAnts = JSON.parse(affiliationsBefore.Messages[0].Data);
+    assert.strictEqual(ownedAnts.Owned[0], antId);
+
+    // Test 1: Owner can unregister the ANT
+    const unregisterResult = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Unregister' },
+          { name: 'Process-Id', value: antId },
+        ],
+        From: STUB_ADDRESS,
+      },
+      stateNoticeResult.Memory,
+    );
+
+    // Should send Unregister-Notice
+    assert.strictEqual(unregisterResult.Messages.length, 2);
+    const unregisterNotice = unregisterResult.Messages[0].Tags.find(
+      (tag) => tag.name === 'Action',
+    );
+    assert.strictEqual(unregisterNotice.value, 'Unregister-Notice');
+
+    // Should also send HyperBEAM patch message
+    const hbPatchMessage = unregisterResult.Messages[1];
+    assert(
+      hbPatchMessage && hbPatchMessage.Tags.find((t) => t.name === 'device'),
+      'missing HyperBEAM acl update',
+    );
+
+    // Verify ANT is no longer in affiliations
+    const affiliationsAfter = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Access-Control-List' },
+          { name: 'Address', value: STUB_ADDRESS },
+        ],
+      },
+      unregisterResult.Memory,
+    );
+
+    const ownedAntsAfter = JSON.parse(affiliationsAfter.Messages[0].Data);
+    assert.strictEqual(ownedAntsAfter.Owned.length, 0);
+  });
+
+  it('should allow ANT to unregister itself', async () => {
+    const antId = ''.padEnd(43, 'ant-self-unregister-test');
+
+    // Register an ANT
+    const stateData = JSON.stringify({
+      Owner: STUB_ADDRESS,
+      Controllers: [STUB_ADDRESS],
+      Balances: {},
+      Name: 'SelfUnregisterTest',
+      Ticker: 'SUT',
+      Records: {},
+    });
+
+    const registerResult = await sendMessage({
+      Tags: [
+        { name: 'Action', value: 'Register' },
+        { name: 'Process-Id', value: antId },
+      ],
+    });
+
+    const stateNoticeResult = await sendMessage(
+      {
+        Tags: [{ name: 'Action', value: 'State-Notice' }],
+        Data: stateData,
+        From: antId,
+        Owner: antId,
+      },
+      registerResult.Memory,
+    );
+
+    // ANT unregisters itself
+    const unregisterResult = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Unregister' },
+          { name: 'Process-Id', value: antId },
+        ],
+        From: antId, // ANT is unregistering itself
+        Owner: antId,
+      },
+      stateNoticeResult.Memory,
+    );
+
+    // Should send Unregister-Notice
+    assert.strictEqual(unregisterResult.Messages.length, 2);
+    const unregisterNotice = unregisterResult.Messages[0].Tags.find(
+      (tag) => tag.name === 'Action',
+    );
+    assert.strictEqual(unregisterNotice.value, 'Unregister-Notice');
+
+    // Should also send HyperBEAM patch message
+    const hbPatchMessage = unregisterResult.Messages[1];
+    assert(
+      hbPatchMessage && hbPatchMessage.Tags.find((t) => t.name === 'device'),
+      'missing HyperBEAM acl update',
+    );
+
+    // Verify ANT is no longer in affiliations
+    const affiliationsAfter = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Access-Control-List' },
+          { name: 'Address', value: STUB_ADDRESS },
+        ],
+      },
+      unregisterResult.Memory,
+    );
+
+    const ownedAntsAfter = JSON.parse(affiliationsAfter.Messages[0].Data);
+    assert.strictEqual(ownedAntsAfter.Owned.length, 0);
+  });
+
+  it('should fail to unregister non-existent ANT', async () => {
+    const nonExistentAntId = ''.padEnd(43, 'non-existent-ant-id');
+
+    const unregisterResult = await sendMessage({
+      Tags: [
+        { name: 'Action', value: 'Unregister' },
+        { name: 'Process-Id', value: nonExistentAntId },
+      ],
+      From: STUB_ADDRESS,
+      Owner: STUB_ADDRESS,
+    });
+
+    // Should have an error message
+    assert.strictEqual(unregisterResult.Messages.length, 1);
+    const errorAction = unregisterResult.Messages[0].Tags.find(
+      (tag) => tag.name === 'Action',
+    );
+    assert.strictEqual(errorAction.value, 'Invalid-Unregister-Notice');
+  });
+
+  it('should fail to unregister ANT by unauthorized user', async () => {
+    const antId = ''.padEnd(43, 'unauthorized-unregister-test');
+    const unauthorizedAddress = ''.padEnd(43, 'unauthorized-address');
+
+    // Register an ANT
+    const stateData = JSON.stringify({
+      Owner: STUB_ADDRESS,
+      Controllers: [STUB_ADDRESS],
+      Balances: {},
+      Name: 'UnauthorizedTest',
+      Ticker: 'UAT',
+      Records: {},
+    });
+
+    const registerResult = await sendMessage({
+      Tags: [
+        { name: 'Action', value: 'Register' },
+        { name: 'Process-Id', value: antId },
+      ],
+    });
+
+    const stateNoticeResult = await sendMessage(
+      {
+        Tags: [{ name: 'Action', value: 'State-Notice' }],
+        Data: stateData,
+        From: antId,
+        Owner: antId,
+      },
+      registerResult.Memory,
+    );
+
+    // Try to unregister with unauthorized address
+    const unregisterResult = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Unregister' },
+          { name: 'Process-Id', value: antId },
+        ],
+        From: unauthorizedAddress,
+        Owner: unauthorizedAddress,
+      },
+      stateNoticeResult.Memory,
+    );
+
+    // Should have an error message
+    assert.strictEqual(unregisterResult.Messages.length, 1);
+    const errorAction = unregisterResult.Messages[0].Tags.find(
+      (tag) => tag.name === 'Action',
+    );
+    assert.strictEqual(errorAction.value, 'Invalid-Unregister-Notice');
+
+    // Verify ANT is still registered
+    const affiliationsAfter = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Access-Control-List' },
+          { name: 'Address', value: STUB_ADDRESS },
+        ],
+      },
+      unregisterResult.Memory,
+    );
+
+    const ownedAntsAfter = JSON.parse(affiliationsAfter.Messages[0].Data);
+    assert.strictEqual(ownedAntsAfter.Owned[0], antId);
+  });
+
+  it('should allow registry owner to unregister ANT', async () => {
+    const antId = ''.padEnd(43, 'registry-owner-unregister-test');
+
+    // Register an ANT
+    const stateData = JSON.stringify({
+      Owner: STUB_ADDRESS,
+      Controllers: [STUB_ADDRESS],
+      Balances: {},
+      Name: 'RegistryOwnerTest',
+      Ticker: 'ROT',
+      Records: {},
+    });
+
+    const registerResult = await sendMessage({
+      Tags: [
+        { name: 'Action', value: 'Register' },
+        { name: 'Process-Id', value: antId },
+      ],
+    });
+
+    const stateNoticeResult = await sendMessage(
+      {
+        Tags: [{ name: 'Action', value: 'State-Notice' }],
+        Data: stateData,
+        From: antId,
+        Owner: antId,
+      },
+      registerResult.Memory,
+    );
+
+    // Registry owner unregisters the ANT
+    const unregisterResult = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Unregister' },
+          { name: 'Process-Id', value: antId },
+        ],
+        From: AO_LOADER_HANDLER_ENV.Process.Owner, // Registry owner
+        Owner: AO_LOADER_HANDLER_ENV.Process.Owner,
+      },
+      stateNoticeResult.Memory,
+      AO_LOADER_HANDLER_ENV,
+    );
+
+    // Should send Unregister-Notice
+    assert.strictEqual(unregisterResult.Messages.length, 2);
+    const unregisterNotice = unregisterResult.Messages[0].Tags.find(
+      (tag) => tag.name === 'Action',
+    );
+    assert.strictEqual(unregisterNotice.value, 'Unregister-Notice');
+
+    // Verify ANT is no longer in affiliations
+    const affiliationsAfter = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Access-Control-List' },
+          { name: 'Address', value: STUB_ADDRESS },
+        ],
+      },
+      unregisterResult.Memory,
+    );
+
+    const ownedAntsAfter = JSON.parse(affiliationsAfter.Messages[0].Data);
+    assert.strictEqual(ownedAntsAfter.Owned.length, 0);
+  });
+
+  it('should allow registry itself (ao.id) to unregister ANT', async () => {
+    const antId = ''.padEnd(43, 'registry-self-unregister-test');
+
+    // Register an ANT
+    const stateData = JSON.stringify({
+      Owner: STUB_ADDRESS,
+      Controllers: [STUB_ADDRESS],
+      Balances: {},
+      Name: 'RegistrySelfTest',
+      Ticker: 'RST',
+      Records: {},
+    });
+
+    const registerResult = await sendMessage({
+      Tags: [
+        { name: 'Action', value: 'Register' },
+        { name: 'Process-Id', value: antId },
+      ],
+    });
+
+    const stateNoticeResult = await sendMessage(
+      {
+        Tags: [{ name: 'Action', value: 'State-Notice' }],
+        Data: stateData,
+        From: antId,
+        Owner: antId,
+      },
+      registerResult.Memory,
+    );
+
+    // Registry itself unregisters the ANT
+    const unregisterResult = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Unregister' },
+          { name: 'Process-Id', value: antId },
+        ],
+        From: AO_LOADER_HANDLER_ENV.Process.Id, // Registry itself (ao.id)
+        Owner: AO_LOADER_HANDLER_ENV.Process.Id,
+      },
+      stateNoticeResult.Memory,
+      AO_LOADER_HANDLER_ENV,
+    );
+
+    // Should send Unregister-Notice
+    assert.strictEqual(unregisterResult.Messages.length, 2);
+    const unregisterNotice = unregisterResult.Messages[0].Tags.find(
+      (tag) => tag.name === 'Action',
+    );
+    assert.strictEqual(unregisterNotice.value, 'Unregister-Notice');
+
+    // Verify ANT is no longer in affiliations
+    const affiliationsAfter = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Access-Control-List' },
+          { name: 'Address', value: STUB_ADDRESS },
+        ],
+      },
+      unregisterResult.Memory,
+    );
+
+    const ownedAntsAfter = JSON.parse(affiliationsAfter.Messages[0].Data);
+    assert.strictEqual(ownedAntsAfter.Owned.length, 0);
+  });
+
+  it('should fail to unregister ANT by controller (not owner)', async () => {
+    const antId = ''.padEnd(43, 'controller-unregister-test');
+    const controllerAddress = ''.padEnd(43, 'controller-address');
+
+    // Register an ANT with a controller that is not the owner
+    const stateData = JSON.stringify({
+      Owner: STUB_ADDRESS,
+      Controllers: [controllerAddress],
+      Balances: {},
+      Name: 'ControllerTest',
+      Ticker: 'CT',
+      Records: {},
+    });
+
+    const stateNoticeResult = await sendMessage({
+      Tags: [{ name: 'Action', value: 'State-Notice' }],
+      Data: stateData,
+      From: antId,
+      Owner: antId,
+    });
+
+    // Try to unregister with controller address (not owner)
+    const unregisterResult = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Unregister' },
+          { name: 'Process-Id', value: antId },
+        ],
+        From: controllerAddress,
+        Owner: controllerAddress,
+      },
+      stateNoticeResult.Memory,
+    );
+
+    // Should have an error message
+    assert.strictEqual(unregisterResult.Messages.length, 1);
+    const errorAction = unregisterResult.Messages[0].Tags.find(
+      (tag) => tag.name === 'Action',
+    );
+    assert.strictEqual(errorAction.value, 'Invalid-Unregister-Notice');
+
+    // Verify ANT is still registered
+    const affiliationsAfter = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Access-Control-List' },
+          { name: 'Address', value: STUB_ADDRESS },
+        ],
+      },
+      unregisterResult.Memory,
+    );
+
+    const ownedAntsAfter = JSON.parse(affiliationsAfter.Messages[0].Data);
+    assert.strictEqual(ownedAntsAfter.Owned[0], antId);
   });
 });

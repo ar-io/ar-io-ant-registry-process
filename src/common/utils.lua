@@ -231,6 +231,7 @@ function utils.updateAffiliations(antId, newAnt, addresses, ants, currentReferen
 	-- Remove previous affiliations for old owner and controllers
 	local maybeOldAnt = ants[antId]
 	local newAffliates = utils.affiliatesForAnt(newAnt)
+	local affiliatesToRemoveAntIdFrom = {}
 
 	-- Remove stale address affiliations
 	if maybeOldAnt ~= nil then
@@ -242,6 +243,7 @@ function utils.updateAffiliations(antId, newAnt, addresses, ants, currentReferen
 		local oldAffliates = utils.affiliatesForAnt(maybeOldAnt)
 		for oldAffliate, _ in pairs(oldAffliates) do
 			if not newAffliates[oldAffliate] and addresses[oldAffliate] then
+				table.insert(affiliatesToRemoveAntIdFrom, oldAffliate)
 				addresses[oldAffliate][antId] = nil
 			end
 		end
@@ -262,6 +264,10 @@ function utils.updateAffiliations(antId, newAnt, addresses, ants, currentReferen
 		ants[antId] = newAnt
 		ants[antId].lastReference = currentReference
 	end
+
+	return {
+		affiliatesToRemoveAntIdFrom = affiliatesToRemoveAntIdFrom,
+	}
 end
 
 function utils.errorHandler(err)
@@ -327,7 +333,11 @@ function utils.affiliatesForAnt(ant)
 	return affliates
 end
 
+---@param address string
+---@param ants ANTMap
+---@return ACL
 function utils.affiliationsForAddress(address, ants)
+	---@type ACL
 	local affiliations = {
 		Owned = {},
 		Controlled = {},
@@ -342,11 +352,72 @@ function utils.affiliationsForAddress(address, ants)
 	return affiliations
 end
 
+---@param ants ANTMap
+---@param processId string
+---@return ACLMap
+function utils.affiliationsForAnt(processId, ants)
+	assert(ants[processId], "Unable to get affiliations for ANT " .. processId .. " because it does not exist")
+	---@type ACLMap
+	local affiliations = {}
+	affiliations[ants[processId].Owner] = utils.affiliationsForAddress(ants[processId].Owner, ants)
+	for controller, _ in pairs(ants[processId].Controllers) do
+		affiliations[controller] = utils.affiliationsForAddress(controller, ants)
+	end
+
+	return affiliations
+end
+
 --- Checks if an address is a valid Arweave address
 --- @param address string The address to check
 --- @return boolean isValidArweaveAddress - whether the address is a valid Arweave address
 function utils.validateArweaveId(address)
 	return type(address) == "string" and #address == 43 and string.match(address, "^[%w-_]+$") ~= nil
+end
+
+function utils.unregisterAnt(caller, ants, antId, addresses)
+	assert(type(antId) == "string", "Process-Id is required")
+	assert(ants[antId], "Unable to unregister ANT " .. antId .. " because it does not exist")
+
+	local antOwner = ants[antId].Owner
+	local isAntOwner = antOwner == caller
+	local isRegistryOwner = caller == Owner or caller == ao.id
+	local isAnt = antId == caller
+	-- Should allow flexibility while protecting against attacks deregistering other peoples assets.
+	assert(isAntOwner or isAnt or isRegistryOwner, "Only ANT owner, ANT, or registry owner, or ao.id can unregister")
+
+	-- Remove from ADDRESSES table
+	addresses[antOwner][antId] = nil
+	for controller, _ in pairs(ants[antId].Controllers) do
+		addresses[controller][antId] = nil
+	end
+	ants[antId] = nil
+end
+
+---@param antId string
+---@param ants ANTMap
+---@return ACLMap
+function utils.generateAffiliationsDelta(antId, ants)
+	local aclMap = utils.affiliationsForAnt(antId, ants)
+	for user, _ in pairs(aclMap) do
+		-- remove ant from owned using filter approach
+		local filteredOwned = {}
+		for _, processId in ipairs(aclMap[user].Owned) do
+			if processId ~= antId then
+				table.insert(filteredOwned, processId)
+			end
+		end
+		aclMap[user].Owned = filteredOwned
+
+		-- remove ant from controllers using filter approach
+		local filteredControlled = {}
+		for _, processId in ipairs(aclMap[user].Controlled) do
+			if processId ~= antId then
+				table.insert(filteredControlled, processId)
+			end
+		end
+		aclMap[user].Controlled = filteredControlled
+	end
+	return aclMap
 end
 
 return utils

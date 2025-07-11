@@ -4,22 +4,35 @@ local main = {}
 -- just to ignore lint warnings
 local ao = ao or {}
 
+---@alias ACL { Owned: string[], Controlled: string[] }
+---@alias ACLMap {[string]: ACL}
+---@alias ANT { Owner: string, Controllers: {[string]: boolean} }
+---@alias ANTMap {[string]: ANT}
+---@alias AddressMap {[string]: {[string]: boolean}}
+---@alias VersionMap {[string]: { messageId: string, moduleId: string, luaSourceId: string, notes: string }}
+
 main.init = function()
 	-- Example ANT structure
 	-- ANTS["antId"] = {
 	--     Owner = "userId",
 	--     Controllers = {"userId1" = true, "userId2" = true},
 	-- }
+	---@type ANTMap
 	ANTS = ANTS or {}
 
 	-- Example ADDRESSES structure - maps a user address to a table keyed on ANT process IDs
 	-- ADDRESSES["userAddress"] = {"antProcessId1" = true, "antProcessId2" = true}
+	---@type AddressMap
 	ADDRESSES = ADDRESSES or {}
 
+	-- Example ANTVersions structure - maps a version number to a table with the messageId, moduleId, luaSourceId, and notes
+	-- ANTVersions["1"] = { messageId = "messageId1", moduleId = "moduleId1", luaSourceId = "luaSourceId1", notes = "notes1" }
+	---@type VersionMap
 	ANTVersions = ANTVersions or {}
 
 	local ActionMap = {
 		Register = "Register",
+		Unregister = "Unregister",
 		StateNotice = "State-Notice",
 		AccessControlList = "Access-Control-List",
 		AddVersion = "Add-Version",
@@ -42,10 +55,49 @@ main.init = function()
 		})
 	end)
 
+	utils.createActionHandler(ActionMap.Unregister, function(msg)
+		local antId = msg.Tags["Process-Id"]
+		assert(type(antId) == "string", "Process-Id is required")
+
+		-- generate the acl here so we can path to the relevant addresses in the mappings
+		local acl = utils.generateAffiliationsDelta(antId, ANTS)
+
+		utils.unregisterAnt(msg.From, ANTS, antId, ADDRESSES)
+		ao.send({
+			Target = msg.From,
+			Action = "Unregister-Notice",
+			["Message-Id"] = msg.Id,
+		})
+		-- Send HyperBEAM patch message with updated ACL that has the ant removed
+
+		ao.send({
+			device = "patch@1.0",
+			cache = { acl = acl },
+		})
+	end)
+
 	utils.createActionHandler(ActionMap.StateNotice, function(msg)
 		local ant = utils.parseAntState(msg.Data)
 		-- we pass in the reference as the state nonce
-		utils.updateAffiliations(msg.From, ant, ADDRESSES, ANTS, tonumber(msg.Reference))
+		local updateResult = utils.updateAffiliations(msg.From, ant, ADDRESSES, ANTS, tonumber(msg.Reference))
+		local affiliatesToRemoveAntIdFrom = updateResult.affiliatesToRemoveAntIdFrom
+
+		-- this may need to be batched for operation within limits of hyperbeam messages, specifically http header size
+		local aclMap = utils.affiliationsForAnt(msg.From, ANTS)
+
+		for _, affiliate in ipairs(affiliatesToRemoveAntIdFrom) do
+			aclMap[affiliate] = utils.affiliationsForAddress(affiliate, ANTS)
+			-- TODO: DELETE the ant from the affiliations on the address mapping. Currently do not know how to do this, or if its even possible with the current state of patch@1.0\
+			-- this will set the mapping to { Owned: [], Controlled: [] } in the hb state
+
+			-- aclMap[affiliate].Owned[utils.indexOf(aclMap[affiliate].Owned, msg.From)] = nil
+			-- aclMap[affiliate].Controlled[utils.indexOf(aclMap[affiliate].Controlled, msg.From)] = nil
+		end
+
+		ao.send({
+			device = "patch@1.0",
+			cache = { acl = aclMap },
+		})
 	end)
 
 	utils.createActionHandler(ActionMap.AccessControlList, function(msg)
