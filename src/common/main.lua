@@ -4,9 +4,11 @@ local main = {}
 -- just to ignore lint warnings
 local ao = ao or {}
 
----@alias ACL { Owned: string[], Controlled: string[] }
+-- Undernames on the acl is ANT ID -> undername array
+---@alias ACL { Owned: string[], Controlled: string[], Undernames: { [string]: string[] } }
 ---@alias ACLMap {[string]: ACL}
----@alias ANT { Owner: string, Controllers: {[string]: boolean} }
+-- UndernameOwners is undername owner -> undername -> boolean
+---@alias ANT { Owner: string, Controllers: {[string]: boolean}, UndernameOwners: {[string]: {[string]: boolean}} }
 ---@alias ANTMap {[string]: ANT}
 ---@alias AddressMap {[string]: {[string]: boolean}}
 ---@alias VersionMap {[string]: { messageId: string, moduleId: string, luaSourceId: string, notes: string }}
@@ -16,6 +18,7 @@ main.init = function()
 	-- ANTS["antId"] = {
 	--     Owner = "userId",
 	--     Controllers = {"userId1" = true, "userId2" = true},
+	--     Undernames = {"userId1": {"undername1": true, "undername2": true}}
 	-- }
 	---@type ANTMap
 	ANTS = ANTS or {}
