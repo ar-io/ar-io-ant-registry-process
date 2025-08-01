@@ -187,10 +187,12 @@ function utils.parseAntState(antJsonStr)
 	local decoded = json.decode(antJsonStr)
 	assert(type(decoded.Controllers) == "table", "Controllers must be a table")
 	assert(type(decoded.Owner) == "string" or type(decoded.Owner) == nil, "Owner must be a string or nil")
+	assert(type(decoded.Records) == "table", "Records must be a table")
 
 	return {
 		Owner = decoded.Owner,
 		Controllers = utils.controllerTableFromArray(decoded.Controllers),
+		Records = decoded.Records,
 	}
 end
 
@@ -261,7 +263,15 @@ function utils.updateAffiliations(antId, newAnt, addresses, ants, currentReferen
 	if #utils.keys(newAffliates) == 0 then
 		ants[antId] = nil
 	else
-		ants[antId] = newAnt
+		ants[antId].Owner = newAnt.Owner
+		ants[antId].Controllers = newAnt.Controllers
+		ants[antId].UndernameOwners = {}
+		for undername, record in pairs(newAnt.Records) do
+			if record.Owner then
+				ants[antId].UndernameOwners[record.Owner] = ants[antId].UndernameOwners[record.Owner] or {}
+				ants[antId].UndernameOwners[record.Owner][undername] = true
+			end
+		end
 		ants[antId].lastReference = currentReference
 	end
 
@@ -330,6 +340,11 @@ function utils.affiliatesForAnt(ant)
 	for address, _ in pairs(ant.Controllers) do
 		affliates[address] = true
 	end
+	for _, record in pairs(ant.Records) do
+		if record.Owner then
+			affliates[record.Owner] = true
+		end
+	end
 	return affliates
 end
 
@@ -341,12 +356,15 @@ function utils.affiliationsForAddress(address, ants)
 	local affiliations = {
 		Owned = {},
 		Controlled = {},
+		Undernames = {},
 	}
 	for antId, ant in pairs(ants) do
 		if ant.Owner == address then
 			table.insert(affiliations.Owned, antId)
 		elseif ant.Controllers[address] then
 			table.insert(affiliations.Controlled, antId)
+		elseif ant.UndernameOwners[address] then
+			affiliations.Undernames[antId] = utils.keys(ant.UndernameOwners[address])
 		end
 	end
 	return affiliations
@@ -362,6 +380,10 @@ function utils.affiliationsForAnt(processId, ants)
 	affiliations[ants[processId].Owner] = utils.affiliationsForAddress(ants[processId].Owner, ants)
 	for controller, _ in pairs(ants[processId].Controllers) do
 		affiliations[controller] = utils.affiliationsForAddress(controller, ants)
+	end
+
+	for undernameOwner, _ in pairs(ants[processId].UndernameOwners) do
+		affiliations[undernameOwner] = utils.affiliationsForAddress(undernameOwner, ants)
 	end
 
 	return affiliations
@@ -390,6 +412,11 @@ function utils.unregisterAnt(caller, ants, antId, addresses)
 	for controller, _ in pairs(ants[antId].Controllers) do
 		addresses[controller][antId] = nil
 	end
+
+	for undernameOwner, _ in pairs(ants[antId].UndernameOwners) do
+		addresses[undernameOwner][antId] = nil
+	end
+
 	ants[antId] = nil
 end
 
@@ -416,6 +443,11 @@ function utils.generateAffiliationsDelta(antId, ants)
 			end
 		end
 		aclMap[user].Controlled = filteredControlled
+
+		aclMap[user].Undernames = {}
+		for undername, _ in pairs(ants[antId].UndernameOwners) do
+			aclMap[user].Undernames[antId] = utils.keys(ants[antId].UndernameOwners[undername])
+		end
 	end
 	return aclMap
 end
