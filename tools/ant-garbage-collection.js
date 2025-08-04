@@ -21,6 +21,11 @@ const arioProcessId =
 const cuUrl = process.env.CU_URL ?? 'https://cu.ardrive.io';
 const graphqlUrl = process.env.GRAPHQL_URL ?? 'https://arweave.net/graphql';
 
+const dryRun = process.argv.includes('--dry-run') ? true : false;
+const limit = process.argv.includes('--limit')
+  ? parseInt(process.argv[process.argv.indexOf('--limit') + 1])
+  : Infinity;
+
 const ao = connect({
   CU_URL: cuUrl,
   GRAPHQL_URL: graphqlUrl,
@@ -82,8 +87,8 @@ async function main() {
       fetchAllProcessIdsInRegistry(),
     ]);
 
-    const antsToUnregister = Array.from(processIdsForNames).filter((antId) =>
-      processIdsInRegistry.includes(antId),
+    const antsToUnregister = Array.from(processIdsInRegistry).filter(
+      (antId) => !Array.from(processIdsForNames).includes(antId),
     );
     console.log(`Found ${antsToUnregister.length} ANTs to unregister`);
 
@@ -93,13 +98,21 @@ async function main() {
       Target = '${registryId}',
       Action = 'Unregister',
       ['Process-Id'] = '${antId}',
-    })\n\n
+    })\n
     `;
     }
 
     const unregisterLua = antsToUnregister
+      .slice(0, limit)
       .map(createUnregisterLuaTemplate)
       .join('');
+
+    if (dryRun) {
+      console.log('Dry run enabled, skipping unregistration');
+      console.log('Unregister Lua preview:');
+      console.log(unregisterLua);
+      process.exit(0);
+    }
 
     const vaotProcess = new AOProcess({
       processId: vaotId,
@@ -121,7 +134,7 @@ async function main() {
 
     console.log(proposalRes);
   } catch (error) {
-    console.error(error); 
+    console.error(error);
     process.exit(1);
   } finally {
     console.log('Done garbage collecting ANTs');
