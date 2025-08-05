@@ -28,3 +28,10 @@ export async function createAntAosLoader() {
     memory: evalRes.Memory,
   };
 }
+
+export function assertPatchMessage(result) {
+  const hbPatchMessage = result.Messages.find((m) =>
+    m.Tags.find((t) => t.name === 'device' && t.value === 'patch@1.0'),
+  );
+  assert(hbPatchMessage, 'missing HyperBEAM acl update');
+}
