@@ -92,20 +92,19 @@ async function main() {
     );
     console.log(`Found ${antsToUnregister.length} ANTs to unregister`);
 
-    function createUnregisterLuaTemplate(antId) {
+    function createUnregisterLuaTemplate(antIds) {
       return `
     Send({
       Target = '${registryId}',
-      Action = 'Unregister',
-      ['Process-Id'] = '${antId}',
+      Action = 'Batch-Unregister',
+      Data = '${JSON.stringify(antIds)}',
     })\n
     `;
     }
 
-    const unregisterLua = antsToUnregister
-      .slice(0, limit)
-      .map(createUnregisterLuaTemplate)
-      .join('');
+    const unregisterLua = createUnregisterLuaTemplate(
+      antsToUnregister.slice(0, limit),
+    );
 
     if (dryRun) {
       console.log('Dry run enabled, skipping unregistration');
