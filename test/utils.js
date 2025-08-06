@@ -6,6 +6,7 @@ import {
   BUNDLED_AOS_LUA,
   DEFAULT_HANDLE_OPTIONS,
 } from '../tools/constants.js';
+import assert from 'node:assert';
 
 /**
  * Loads the aos wasm binary and returns the handle function with program memory

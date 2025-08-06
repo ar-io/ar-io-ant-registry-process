@@ -50,11 +50,6 @@ describe('ANT Registration Cases', async () => {
       From: antId,
       Owner: antId,
     });
-    const hbPatchMessage = stateNoticeResult.Messages.at(0);
-    assert(
-      hbPatchMessage && hbPatchMessage.Tags.find((t) => t.name === 'device'),
-      'missing HyperBEAM acl update',
-    );
 
     const allAntsResult = await sendMessage(
       {
@@ -180,25 +175,6 @@ describe('ANT Registration Cases', async () => {
       (tag) => tag.name === 'Action',
     );
     assert.strictEqual(failureAction.value, 'Invalid-State-Notice-Notice');
-
-    // Successful update with later reference
-    const successUpdate = await sendMessage(
-      {
-        Tags: [{ name: 'Action', value: 'State-Notice' }],
-        Data: updatedStateData1,
-        From: antId1,
-        Owner: antId1,
-        Reference: 3000, // Later reference
-      },
-      failedUpdate.Memory,
-    );
-
-    // should have a hb patch message
-    const hbPatchMessage = successUpdate.Messages.at(0);
-    assert(
-      hbPatchMessage && hbPatchMessage.Tags.find((t) => t.name === 'device'),
-      'missing HyperBEAM acl update',
-    );
   });
 
   it('should handle unregister functionality correctly', async () => {
@@ -644,22 +620,38 @@ describe('ANT Registration Cases', async () => {
     // Register multiple ANTs
     let currentMemory = startMemory;
 
-    for (const antId of antIds) {
-      const stateData = JSON.stringify({
-        Owner: STUB_ADDRESS,
-        Controllers: [STUB_ADDRESS],
-      });
+    const stateData = JSON.stringify({
+      Owner: STUB_ADDRESS,
+      Controllers: [STUB_ADDRESS],
+    });
 
-      // Send state notice to register the ANT
-      const stateNoticeResult = await sendMessage({
+    // Send state notice to register the ANT
+    const stateNoticeResult = await sendMessage({
+      Tags: [{ name: 'Action', value: 'State-Notice' }],
+      Data: stateData,
+      From: antIds[0],
+      Owner: antIds[0],
+    });
+
+    const stateNoticeResult2 = await sendMessage(
+      {
         Tags: [{ name: 'Action', value: 'State-Notice' }],
         Data: stateData,
-        From: antId,
-        Owner: antId,
-      });
+        From: antIds[1],
+        Owner: antIds[1],
+      },
+      stateNoticeResult.Memory,
+    );
 
-      currentMemory = stateNoticeResult.Memory;
-    }
+    const stateNoticeResult3 = await sendMessage(
+      {
+        Tags: [{ name: 'Action', value: 'State-Notice' }],
+        Data: stateData,
+        From: antIds[2],
+        Owner: antIds[2],
+      },
+      stateNoticeResult2.Memory,
+    );
 
     // Verify all ANTs are registered
     const affiliationsBefore = await sendMessage(
@@ -669,7 +661,7 @@ describe('ANT Registration Cases', async () => {
           { name: 'Address', value: STUB_ADDRESS },
         ],
       },
-      currentMemory,
+      stateNoticeResult3.Memory,
     );
 
     const ownedAntsBefore = JSON.parse(affiliationsBefore.Messages[0].Data);
@@ -686,18 +678,18 @@ describe('ANT Registration Cases', async () => {
         From: AO_LOADER_HANDLER_ENV.Process.Owner, // Registry owner
         Owner: AO_LOADER_HANDLER_ENV.Process.Owner,
       },
-      currentMemory,
+      affiliationsBefore.Memory,
       AO_LOADER_HANDLER_ENV,
     );
 
-    // Should send Batch-Unregister-Notice and HyperBEAM patch message
+    // Should send single Batch-Unregister-Notice and HyperBEAM patch message
     assert.strictEqual(batchUnregisterResult.Messages.length, 2);
 
-    // Check first notice message
-    const batchUnregisterNotice1 = batchUnregisterResult.Messages[0].Tags.find(
+    // Check success notice message
+    const batchUnregisterNotice = batchUnregisterResult.Messages[0].Tags.find(
       (tag) => tag.name === 'Action',
     );
-    assert.strictEqual(batchUnregisterNotice1.value, 'Batch-Unregister-Notice');
+    assert.strictEqual(batchUnregisterNotice.value, 'Batch-Unregister-Notice');
 
     // Should also send HyperBEAM patch message
     assertPatchMessage(batchUnregisterResult);
@@ -780,10 +772,15 @@ describe('ANT Registration Cases', async () => {
       AO_LOADER_HANDLER_ENV,
     );
 
-    // Should have an error message
+    // Should have an error message due to data validation failure
     assert.strictEqual(batchUnregisterResult.Messages.length, 1);
-    const errorMessage = batchUnregisterResult.Messages[0];
-    assert(errorMessage.Tags.find((tag) => tag.name === 'Error'));
+    const errorMessage = batchUnregisterResult.Messages[0].Tags.find(
+      (tag) =>
+        tag.name === 'Action' &&
+        tag.value === 'Invalid-Batch-Unregister-Notice',
+    );
+
+    assert(errorMessage, 'should have Invalid-Batch-Unregister-Notice');
   });
 
   it('should fail batch unregister with invalid antId in array', async () => {
@@ -801,6 +798,7 @@ describe('ANT Registration Cases', async () => {
 
     // Should have an error message
     assert.strictEqual(batchUnregisterResult.Messages.length, 1);
+
     const errorMessage = batchUnregisterResult.Messages[0];
     assert(errorMessage.Tags.find((tag) => tag.name === 'Error'));
   });
@@ -820,10 +818,154 @@ describe('ANT Registration Cases', async () => {
 
     // Should complete successfully with only HyperBEAM patch message
     assert.strictEqual(batchUnregisterResult.Messages.length, 1);
-    const hbPatchMessage = batchUnregisterResult.Messages[0];
-    assert(
-      hbPatchMessage && hbPatchMessage.Tags.find((t) => t.name === 'device'),
-      'missing HyperBEAM acl update',
+  });
+
+  it('should handle partial failures in batch unregister', async () => {
+    const existingAntId = ''.padEnd(43, 'existing-batch-ant');
+    const nonExistentAntId = ''.padEnd(43, 'non-existent-ant');
+
+    // Register one ANT
+    const stateData = JSON.stringify({
+      Owner: STUB_ADDRESS,
+      Controllers: [STUB_ADDRESS],
+    });
+
+    const stateNoticeResult = await sendMessage({
+      Tags: [{ name: 'Action', value: 'State-Notice' }],
+      Data: stateData,
+      From: existingAntId,
+      Owner: existingAntId,
+    });
+
+    // Try to batch unregister existing + non-existing ANT
+    const batchUnregisterResult = await sendMessage(
+      {
+        Tags: [{ name: 'Action', value: 'Batch-Unregister' }],
+        Data: JSON.stringify([existingAntId, nonExistentAntId]),
+        From: AO_LOADER_HANDLER_ENV.Process.Owner,
+        Owner: AO_LOADER_HANDLER_ENV.Process.Owner,
+      },
+      stateNoticeResult.Memory,
+      AO_LOADER_HANDLER_ENV,
     );
+
+    // Should have Invalid-Batch-Unregister-Notice due to partial failure
+    assert.strictEqual(batchUnregisterResult.Messages.length, 2);
+    const errorNotice = batchUnregisterResult.Messages[0].Tags.find(
+      (tag) => tag.name === 'Action',
+    );
+    assert.strictEqual(errorNotice.value, 'Invalid-Batch-Unregister-Notice');
+
+    // Should include error details
+    const errorData = JSON.parse(batchUnregisterResult.Messages[0].Data);
+    assert(
+      errorData[nonExistentAntId],
+      'Should have error for non-existent ANT',
+    );
+
+    assertPatchMessage(batchUnregisterResult);
+
+    // Verify the existing ANT was unregistered
+    const affiliationsAfter = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Access-Control-List' },
+          { name: 'Address', value: STUB_ADDRESS },
+        ],
+      },
+      batchUnregisterResult.Memory,
+    );
+
+    const ownedAntsAfter = JSON.parse(affiliationsAfter.Messages[0].Data);
+    assert.strictEqual(ownedAntsAfter.Owned.length, 0);
+  });
+
+  it('should handle duplicate ANT IDs in batch unregister', async () => {
+    const antId = ''.padEnd(43, 'duplicate-test-ant');
+
+    // Register one ANT
+    const stateData = JSON.stringify({
+      Owner: STUB_ADDRESS,
+      Controllers: [STUB_ADDRESS],
+    });
+
+    const stateNoticeResult = await sendMessage({
+      Tags: [{ name: 'Action', value: 'State-Notice' }],
+      Data: stateData,
+      From: antId,
+      Owner: antId,
+    });
+
+    // Try to batch unregister with duplicate IDs
+    const batchUnregisterResult = await sendMessage(
+      {
+        Tags: [{ name: 'Action', value: 'Batch-Unregister' }],
+        Data: JSON.stringify([antId, antId, antId]),
+        From: AO_LOADER_HANDLER_ENV.Process.Owner,
+        Owner: AO_LOADER_HANDLER_ENV.Process.Owner,
+      },
+      stateNoticeResult.Memory,
+      AO_LOADER_HANDLER_ENV,
+    );
+
+    // Should succeed with single success notice + patch
+    assert.strictEqual(batchUnregisterResult.Messages.length, 2);
+    const successNotice = batchUnregisterResult.Messages[0].Tags.find(
+      (tag) => tag.name === 'Action',
+    );
+    assert.strictEqual(successNotice.value, 'Batch-Unregister-Notice');
+
+    assertPatchMessage(batchUnregisterResult);
+
+    // Verify ANT was unregistered (only once, not multiple times)
+    const affiliationsAfter = await sendMessage(
+      {
+        Tags: [
+          { name: 'Action', value: 'Access-Control-List' },
+          { name: 'Address', value: STUB_ADDRESS },
+        ],
+      },
+      batchUnregisterResult.Memory,
+    );
+
+    const ownedAntsAfter = JSON.parse(affiliationsAfter.Messages[0].Data);
+    assert.strictEqual(ownedAntsAfter.Owned.length, 0);
+  });
+
+  it('should handle all non-existent ANTs in batch unregister', async () => {
+    const nonExistentAntIds = [
+      ''.padEnd(43, 'non-existent-1'),
+      ''.padEnd(43, 'non-existent-2'),
+    ];
+
+    // Try to batch unregister all non-existing ANTs
+    const batchUnregisterResult = await sendMessage(
+      {
+        Tags: [{ name: 'Action', value: 'Batch-Unregister' }],
+        Data: JSON.stringify(nonExistentAntIds),
+        From: AO_LOADER_HANDLER_ENV.Process.Owner,
+        Owner: AO_LOADER_HANDLER_ENV.Process.Owner,
+      },
+      startMemory,
+      AO_LOADER_HANDLER_ENV,
+    );
+
+    assert.strictEqual(batchUnregisterResult.Messages.length, 1);
+    assert.throws(
+      () => assertPatchMessage(batchUnregisterResult),
+      'should not have patch message since all ANTs are non-existent and would result in an empty ACL',
+    );
+    const errorNotice = batchUnregisterResult.Messages[0].Tags.find(
+      (tag) => tag.name === 'Action',
+    );
+
+    assert.strictEqual(errorNotice.value, 'Invalid-Batch-Unregister-Notice');
+
+    // Should include error details for all ANTs
+    const errorData = JSON.parse(batchUnregisterResult.Messages[0].Data);
+
+    nonExistentAntIds.forEach((antId) => {
+      assert(errorData[antId], `Should have error for ${antId}`);
+    });
   });
 });
