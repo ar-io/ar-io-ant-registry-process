@@ -81,7 +81,8 @@ main.init = function()
 
 	utils.createActionHandler(ActionMap.BatchUnregister, function(msg)
 		assert(msg.From == Owner, "Only ANT Registry owner can batch unregister")
-		local antIds = json.decode(msg.Data)
+		local antIds = utils.safeDecodeJson(msg.Data)
+		assert(antIds, "msg.Data must be a valid JSON string")
 		assert(type(antIds) == "table" and #antIds > 0, "msg.Data must be a table of antIds, recieved " .. type(antIds))
 
 		-- dedupe and validate the antIds
