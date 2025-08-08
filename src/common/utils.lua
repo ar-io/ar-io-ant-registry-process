@@ -420,4 +420,18 @@ function utils.generateAffiliationsDelta(antId, ants)
 	return aclMap
 end
 
+-- Copied from https://github.com/ar-io/ar-io-network-process/blob/develop/src/utils.lua#L363
+--- Safely decodes a JSON string
+--- @param jsonString string|nil The JSON string to decode
+--- @return table|nil decodedJson - the decoded JSON or nil if the string is nil or the decoding fails
+function utils.safeDecodeJson(jsonString)
+	if not jsonString then
+		return nil
+	end
+	local status, result = pcall(json.decode, jsonString)
+	if not status then
+		return nil
+	end
+	return result
+end
 return utils

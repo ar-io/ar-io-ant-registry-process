@@ -6,6 +6,7 @@ import {
   BUNDLED_AOS_LUA,
   DEFAULT_HANDLE_OPTIONS,
 } from '../tools/constants.js';
+import assert from 'node:assert';
 
 /**
  * Loads the aos wasm binary and returns the handle function with program memory
@@ -27,4 +28,11 @@ export async function createAntAosLoader() {
     handle,
     memory: evalRes.Memory,
   };
+}
+
+export function assertPatchMessage(result) {
+  const hbPatchMessage = result.Messages.find((m) =>
+    m.Tags.find((t) => t.name === 'device' && t.value === 'patch@1.0'),
+  );
+  assert(hbPatchMessage, 'missing HyperBEAM acl update');
 }

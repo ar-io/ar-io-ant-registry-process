@@ -33,6 +33,7 @@ main.init = function()
 	local ActionMap = {
 		Register = "Register",
 		Unregister = "Unregister",
+		BatchUnregister = "Batch-Unregister",
 		StateNotice = "State-Notice",
 		AccessControlList = "Access-Control-List",
 		AddVersion = "Add-Version",
@@ -69,11 +70,78 @@ main.init = function()
 			["Message-Id"] = msg.Id,
 		})
 		-- Send HyperBEAM patch message with updated ACL that has the ant removed
+		-- only send if the acl is not empty, as we will nuke the entire ACL from the patch device if it is empty
+		if #utils.keys(acl) > 0 then
+			ao.send({
+				device = "patch@1.0",
+				cache = { acl = acl },
+			})
+		end
+	end)
+
+	utils.createActionHandler(ActionMap.BatchUnregister, function(msg)
+		assert(msg.From == Owner, "Only ANT Registry owner can batch unregister")
+		local antIds = utils.safeDecodeJson(msg.Data)
+		assert(antIds, "msg.Data must be a valid JSON string")
+		assert(
+			type(antIds) == "table" and #antIds > 0,
+			"msg.Data must be a table of ANT IDs, received " .. type(antIds)
+		)
+		assert(#antIds <= 1000, "msg.Data must be a table of less than or equal to 1000 ANT IDs")
+
+		-- de-dupe and validate the antIds
+		local antIdsToUnregister = {}
+		--- At the end of the loop, if there are any errors, we will send a notice to the owner with the error
+		--- messages for each antId that had an error.
+		local errors = {}
+
+		for _, antId in ipairs(antIds) do
+			local normalizedAntId = tostring(antId)
+			if not antIdsToUnregister[normalizedAntId] and not errors[normalizedAntId] then
+				if not utils.validateArweaveId(normalizedAntId) then
+					errors[normalizedAntId] = "Invalid antId: " .. tostring(normalizedAntId)
+				elseif not ANTS[normalizedAntId] then
+					errors[normalizedAntId] = "ANT " .. normalizedAntId .. " is not registered"
+				else
+					antIdsToUnregister[normalizedAntId] = true
+				end
+			end
+		end
+
+		--- for the patch device
+		local patchAcl = {}
+
+		for antId, _ in pairs(antIdsToUnregister) do
+			-- generate the acl here so we can path to the relevant addresses in the mappings
+			-- only apply to the patchAcl if unregister succeeds
+
+			local deltaAcl = utils.generateAffiliationsDelta(antId, ANTS)
+
+			--- the entire batch unregister from failing unnecessarily.
+			utils.unregisterAnt(msg.From, ANTS, antId, ADDRESSES)
+
+			-- unregister succeeded, so we apply the delta to the patchAcl
+			for address, newAcl in pairs(deltaAcl) do
+				patchAcl[address] = newAcl
+			end
+		end
 
 		ao.send({
-			device = "patch@1.0",
-			cache = { acl = acl },
+			Target = msg.From,
+			Action = "Batch-Unregister-Notice",
+			["Message-Id"] = msg.Id,
+			Error = #utils.keys(errors) > 0 and "Batch unregister failed for " .. #utils.keys(errors) .. " ANTs" or nil,
+			Data = json.encode({ errors = errors }),
 		})
+
+		--- we need to make sure that the patchAcl is not empty, other we will nuke the entire ACL from the patch device
+		if #utils.keys(patchAcl) > 0 then
+			-- Send HyperBEAM patch message with updated ACL that has the ant removed
+			ao.send({
+				device = "patch@1.0",
+				cache = { acl = patchAcl },
+			})
+		end
 	end)
 
 	utils.createActionHandler(ActionMap.StateNotice, function(msg)
@@ -94,10 +162,13 @@ main.init = function()
 			-- aclMap[affiliate].Controlled[utils.indexOf(aclMap[affiliate].Controlled, msg.From)] = nil
 		end
 
-		ao.send({
-			device = "patch@1.0",
-			cache = { acl = aclMap },
-		})
+		-- only send if the aclMap is not empty, as we will nuke the entire ACL from the patch device if it is empty
+		if #utils.keys(aclMap) > 0 then
+			ao.send({
+				device = "patch@1.0",
+				cache = { acl = aclMap },
+			})
+		end
 	end)
 
 	utils.createActionHandler(ActionMap.AccessControlList, function(msg)
