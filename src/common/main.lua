@@ -82,57 +82,62 @@ main.init = function()
 	utils.createActionHandler(ActionMap.BatchUnregister, function(msg)
 		assert(msg.From == Owner, "Only ANT Registry owner can batch unregister")
 		local antIds = json.decode(msg.Data)
-		assert(
-			type(antIds) == "table" and #antIds > 0 and utils.validateArweaveId(antIds[1]),
-			"msg.Data must be a table of antIds, recieved " .. type(antIds)
-		)
+		assert(type(antIds) == "table" and #antIds > 0, "msg.Data must be a table of antIds, recieved " .. type(antIds))
 
-		--- for the patch device
-		local patchAcl = {}
+		-- dedupe and validate the antIds
+		local antIdsToUnregister = {}
 		--- At the end of the loop, if there are any errors, we will send a notice to the owner with the error
 		--- messages for each antId that had an error.
 		local antIdErrorMap = {}
-		--- we do this to skip over duplicate antIds in the array
-		--- these would error out because we already unregistered them
-		local visitedAntIds = {}
 
-		for _, antId in ipairs(antIds) do
-			--- if we have already visited this antId, we skip it
-			if not visitedAntIds[antId] then
-				visitedAntIds[antId] = true
-				assert(utils.validateArweaveId(antId) ~= false, "Invalid antId: " .. tostring(antId))
+		local uniqueAntIds = 0
 
-				-- generate the acl here so we can path to the relevant addresses in the mappings
-				-- only apply to the patchAcl if unregister succeeds
-				-- pcall because generateAffiliationsDelta can error out if the antId is not registered
-				local deltaStatus, deltaAcl = xpcall(function()
-					return utils.generateAffiliationsDelta(antId, ANTS)
-				end, utils.errorHandler)
-
-				--- It may be the case that a non existant ANT was passed in, so we need to handle the error to prevent
-				--- the entire batch unregister from failing unnecessarily.
-				local unregisterStatus, unregisterRes = xpcall(function()
-					return utils.unregisterAnt(msg.From, ANTS, antId, ADDRESSES)
-				end, utils.errorHandler)
-
-				if not unregisterStatus or not deltaStatus then
-					-- unregister failed, so we add the error to the map
-					antIdErrorMap[antId] = unregisterRes or deltaStatus
+		for i = #antIds, 1, -1 do
+			local antId = antIds[i]
+			if not antIdsToUnregister[antId] and not antIdErrorMap[antId] then
+				uniqueAntIds = uniqueAntIds + 1
+				if not utils.validateArweaveId(antId) then
+					antIdErrorMap[antId] = "Invalid antId: " .. tostring(antId)
+				elseif not ANTS[antId] then
+					antIdErrorMap[antId] = "ANT " .. antId .. " is not registered"
 				else
-					-- unregister succeeded, so we apply the delta to the patchAcl
-					for address, newAcl in pairs(deltaAcl) do
-						patchAcl[address] = newAcl
-					end
+					antIdsToUnregister[antId] = true
 				end
 			end
+			table.remove(antIds, i)
 		end
+
+		-- clear the table to ensure that the memory is freed
+		antIds = nil
+
+		--- for the patch device
+		local patchAcl = {}
+
+		for antId, _ in pairs(antIdsToUnregister) do
+			-- generate the acl here so we can path to the relevant addresses in the mappings
+			-- only apply to the patchAcl if unregister succeeds
+
+			local deltaAcl = utils.generateAffiliationsDelta(antId, ANTS)
+
+			--- It may be the case that a non existant ANT was passed in, so we need to handle the error to prevent
+			--- the entire batch unregister from failing unnecessarily.
+			utils.unregisterAnt(msg.From, ANTS, antId, ADDRESSES)
+
+			-- unregister succeeded, so we apply the delta to the patchAcl
+			for address, newAcl in pairs(deltaAcl) do
+				patchAcl[address] = newAcl
+			end
+		end
+
+		-- free memory from the ants to unregister
+		antIdsToUnregister = nil
 
 		if #utils.keys(antIdErrorMap) > 0 then
 			ao.send({
 				Target = msg.From,
 				Action = "Invalid-Batch-Unregister-Notice",
 				["Message-Id"] = msg.Id,
-				Error = #antIdErrorMap .. " ANTs out of " .. #visitedAntIds .. " failed to unregister",
+				Error = #antIdErrorMap .. " ANTs out of " .. uniqueAntIds .. " failed to unregister",
 				Data = json.encode(antIdErrorMap),
 			})
 		else
