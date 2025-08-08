@@ -774,13 +774,11 @@ describe('ANT Registration Cases', async () => {
 
     // Should have an error message due to data validation failure
     assert.strictEqual(batchUnregisterResult.Messages.length, 1);
-    const errorMessage = batchUnregisterResult.Messages[0].Tags.find(
-      (tag) =>
-        tag.name === 'Action' &&
-        tag.value === 'Invalid-Batch-Unregister-Notice',
-    );
-
-    assert(errorMessage, 'should have Invalid-Batch-Unregister-Notice');
+    const errorMessage = batchUnregisterResult.Messages[0];
+    const actionTag = errorMessage.Tags.find((tag) => tag.name === 'Action');
+    const errorTag = errorMessage.Tags.find((tag) => tag.name === 'Error');
+    assert.strictEqual(actionTag.value, 'Invalid-Batch-Unregister-Notice');
+    assert.strictEqual(errorTag.value, 'Batch-Unregister-Error');
   });
 
   it('should fail batch unregister with invalid antId in array', async () => {
@@ -788,7 +786,11 @@ describe('ANT Registration Cases', async () => {
     const batchUnregisterResult = await sendMessage(
       {
         Tags: [{ name: 'Action', value: 'Batch-Unregister' }],
-        Data: JSON.stringify(['valid-ant-id', 123, 'another-valid-id']),
+        Data: JSON.stringify([
+          'valid-ant-id'.padEnd(43, 'valid-ant-id'),
+          123,
+          'another-valid-id'.padEnd(43, 'another-valid-id'),
+        ]),
         From: AO_LOADER_HANDLER_ENV.Process.Owner,
         Owner: AO_LOADER_HANDLER_ENV.Process.Owner,
       },
@@ -799,8 +801,15 @@ describe('ANT Registration Cases', async () => {
     // Should have an error message
     assert.strictEqual(batchUnregisterResult.Messages.length, 1);
 
-    const errorMessage = batchUnregisterResult.Messages[0];
-    assert(errorMessage.Tags.find((tag) => tag.name === 'Error'));
+    const batchNotice = batchUnregisterResult.Messages[0];
+    const actionTag = batchNotice.Tags.find((tag) => tag.name === 'Action');
+    const errorTag = batchNotice.Tags.find((tag) => tag.name === 'Error');
+    assert.strictEqual(actionTag.value, 'Batch-Unregister-Notice');
+    assert(errorTag, 'Should have Error tag indicating invalid antId');
+    assert(
+      errorTag.value.startsWith('Batch unregister failed for'),
+      'Error message should start with "Batch unregister failed for"',
+    );
   });
 
   it('should handle empty array in batch unregister', async () => {
@@ -849,17 +858,22 @@ describe('ANT Registration Cases', async () => {
       AO_LOADER_HANDLER_ENV,
     );
 
-    // Should have Invalid-Batch-Unregister-Notice due to partial failure
+    // Should have Batch-Unregister-Notice with Error tag due to partial failure
     assert.strictEqual(batchUnregisterResult.Messages.length, 2);
-    const errorNotice = batchUnregisterResult.Messages[0].Tags.find(
-      (tag) => tag.name === 'Action',
+    const batchNotice = batchUnregisterResult.Messages[0];
+    const actionTag = batchNotice.Tags.find((tag) => tag.name === 'Action');
+    const errorTag = batchNotice.Tags.find((tag) => tag.name === 'Error');
+    assert.strictEqual(actionTag.value, 'Batch-Unregister-Notice');
+    assert(errorTag, 'Should have Error tag indicating partial failure');
+    assert(
+      errorTag.value.startsWith('Batch unregister failed for'),
+      'Error message should start with "Batch unregister failed for"',
     );
-    assert.strictEqual(errorNotice.value, 'Invalid-Batch-Unregister-Notice');
 
     // Should include error details
     const errorData = JSON.parse(batchUnregisterResult.Messages[0].Data);
     assert(
-      errorData[nonExistentAntId],
+      errorData.errors[nonExistentAntId],
       'Should have error for non-existent ANT',
     );
 
@@ -955,17 +969,51 @@ describe('ANT Registration Cases', async () => {
       () => assertPatchMessage(batchUnregisterResult),
       'should not have patch message since all ANTs are non-existent and would result in an empty ACL',
     );
-    const errorNotice = batchUnregisterResult.Messages[0].Tags.find(
-      (tag) => tag.name === 'Action',
+    const batchNotice = batchUnregisterResult.Messages[0];
+    const actionTag = batchNotice.Tags.find((tag) => tag.name === 'Action');
+    const errorTag = batchNotice.Tags.find((tag) => tag.name === 'Error');
+    assert.strictEqual(actionTag.value, 'Batch-Unregister-Notice');
+    assert(
+      errorTag,
+      'Should have Error tag indicating all ANTs are non-existent',
     );
-
-    assert.strictEqual(errorNotice.value, 'Invalid-Batch-Unregister-Notice');
+    assert(
+      errorTag.value.startsWith('Batch unregister failed for'),
+      'Error message should start with "Batch unregister failed for"',
+    );
 
     // Should include error details for all ANTs
     const errorData = JSON.parse(batchUnregisterResult.Messages[0].Data);
 
     nonExistentAntIds.forEach((antId) => {
-      assert(errorData[antId], `Should have error for ${antId}`);
+      assert(errorData.errors[antId], `Should have error for ${antId}`);
     });
+  });
+
+  it('should fail batch unregister with over 1000 ANT IDs', async () => {
+    // Create an array with 1001 ANT IDs to exceed the limit
+    const tooManyAntIds = Array.from({ length: 1001 }, (_, index) =>
+      `ant-id-${index}`.padEnd(43, `ant-id-${index}`),
+    );
+
+    // Try batch unregister with too many IDs
+    const batchUnregisterResult = await sendMessage(
+      {
+        Tags: [{ name: 'Action', value: 'Batch-Unregister' }],
+        Data: JSON.stringify(tooManyAntIds),
+        From: AO_LOADER_HANDLER_ENV.Process.Owner,
+        Owner: AO_LOADER_HANDLER_ENV.Process.Owner,
+      },
+      startMemory,
+      AO_LOADER_HANDLER_ENV,
+    );
+
+    // Should have an error message due to exceeding the 1000 ID limit
+    assert.strictEqual(batchUnregisterResult.Messages.length, 1);
+    const errorMessage = batchUnregisterResult.Messages[0];
+    const actionTag = errorMessage.Tags.find((tag) => tag.name === 'Action');
+    const errorTag = errorMessage.Tags.find((tag) => tag.name === 'Error');
+    assert.strictEqual(actionTag.value, 'Invalid-Batch-Unregister-Notice');
+    assert.strictEqual(errorTag.value, 'Batch-Unregister-Error');
   });
 });

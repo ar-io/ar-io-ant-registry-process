@@ -83,33 +83,30 @@ main.init = function()
 		assert(msg.From == Owner, "Only ANT Registry owner can batch unregister")
 		local antIds = utils.safeDecodeJson(msg.Data)
 		assert(antIds, "msg.Data must be a valid JSON string")
-		assert(type(antIds) == "table" and #antIds > 0, "msg.Data must be a table of antIds, recieved " .. type(antIds))
+		assert(
+			type(antIds) == "table" and #antIds > 0,
+			"msg.Data must be a table of ANT IDs, received " .. type(antIds)
+		)
+		assert(#antIds <= 1000, "msg.Data must be a table of less than or equal to 1000 ANT IDs")
 
-		-- dedupe and validate the antIds
+		-- de-dupe and validate the antIds
 		local antIdsToUnregister = {}
 		--- At the end of the loop, if there are any errors, we will send a notice to the owner with the error
 		--- messages for each antId that had an error.
-		local antIdErrorMap = {}
+		local errors = {}
 
-		local uniqueAntIds = 0
-
-		for i = #antIds, 1, -1 do
-			local antId = antIds[i]
-			if not antIdsToUnregister[antId] and not antIdErrorMap[antId] then
-				uniqueAntIds = uniqueAntIds + 1
-				if not utils.validateArweaveId(antId) then
-					antIdErrorMap[antId] = "Invalid antId: " .. tostring(antId)
-				elseif not ANTS[antId] then
-					antIdErrorMap[antId] = "ANT " .. antId .. " is not registered"
+		for _, antId in ipairs(antIds) do
+			local normalizedAntId = tostring(antId)
+			if not antIdsToUnregister[normalizedAntId] and not errors[normalizedAntId] then
+				if not utils.validateArweaveId(normalizedAntId) then
+					errors[normalizedAntId] = "Invalid antId: " .. tostring(normalizedAntId)
+				elseif not ANTS[normalizedAntId] then
+					errors[normalizedAntId] = "ANT " .. normalizedAntId .. " is not registered"
 				else
-					antIdsToUnregister[antId] = true
+					antIdsToUnregister[normalizedAntId] = true
 				end
 			end
-			table.remove(antIds, i)
 		end
-
-		-- clear the table to ensure that the memory is freed
-		antIds = nil
 
 		--- for the patch device
 		local patchAcl = {}
@@ -120,7 +117,6 @@ main.init = function()
 
 			local deltaAcl = utils.generateAffiliationsDelta(antId, ANTS)
 
-			--- It may be the case that a non existant ANT was passed in, so we need to handle the error to prevent
 			--- the entire batch unregister from failing unnecessarily.
 			utils.unregisterAnt(msg.From, ANTS, antId, ADDRESSES)
 
@@ -130,24 +126,13 @@ main.init = function()
 			end
 		end
 
-		-- free memory from the ants to unregister
-		antIdsToUnregister = nil
-
-		if #utils.keys(antIdErrorMap) > 0 then
-			ao.send({
-				Target = msg.From,
-				Action = "Invalid-Batch-Unregister-Notice",
-				["Message-Id"] = msg.Id,
-				Error = #antIdErrorMap .. " ANTs out of " .. uniqueAntIds .. " failed to unregister",
-				Data = json.encode(antIdErrorMap),
-			})
-		else
-			ao.send({
-				Target = msg.From,
-				Action = "Batch-Unregister-Notice",
-				["Message-Id"] = msg.Id,
-			})
-		end
+		ao.send({
+			Target = msg.From,
+			Action = "Batch-Unregister-Notice",
+			["Message-Id"] = msg.Id,
+			Error = #utils.keys(errors) > 0 and "Batch unregister failed for " .. #utils.keys(errors) .. " ANTs" or nil,
+			Data = json.encode({ errors = errors }),
+		})
 
 		--- we need to make sure that the patchAcl is not empty, other we will nuke the entire ACL from the patch device
 		if #utils.keys(patchAcl) > 0 then
