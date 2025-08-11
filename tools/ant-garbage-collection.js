@@ -126,7 +126,7 @@ async function main() {
         },
         { name: 'Proposal-Type', value: 'Eval' },
         { name: 'Vote', value: 'yay' },
-        { name: 'Process-Id', value: registryId },
+        { name: 'Process-Id', value: vaotId },
       ],
       data: unregisterLua,
     });
