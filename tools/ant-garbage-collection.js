@@ -1,5 +1,5 @@
-import { connect, createDataItemSigner } from '@permaweb/aoconnect';
-import { AOProcess, ARIO } from '@ar.io/sdk';
+import { connect } from '@permaweb/aoconnect';
+import { AOProcess, ARIO, ArweaveSigner, createAoSigner } from '@ar.io/sdk';
 import Arweave from 'arweave';
 
 const arweave = Arweave.init({
@@ -11,6 +11,10 @@ const arweave = Arweave.init({
 const jwk = process.env.WALLET
   ? JSON.parse(process.env.WALLET)
   : await arweave.wallets.generate();
+
+const signer = new ArweaveSigner(jwk);
+const aoSigner = createAoSigner(signer);
+
 const registryId =
   process.env.REGISTRY_ID ?? 'i_le_yKKPVstLTDSmkHRqf-wYphMnwB9OhleiTgMkWc';
 const vaotId =
@@ -35,7 +39,7 @@ const ario = ARIO.init({
     processId: arioProcessId,
     ao,
   }),
-  signer: createDataItemSigner(jwk),
+  signer: aoSigner,
 });
 
 const fetchAllArNSProcessIds = async () => {
@@ -129,6 +133,7 @@ async function main() {
         { name: 'Process-Id', value: vaotId },
       ],
       data: unregisterLua,
+      signer: aoSigner,
     });
 
     console.log(proposalRes);
