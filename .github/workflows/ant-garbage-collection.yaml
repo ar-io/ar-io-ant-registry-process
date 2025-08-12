@@ -1,0 +1,103 @@
+name: ANT Garbage Collection
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 1-7 * 1' # Run on the first Monday of each month at midnight UTC
+
+jobs:
+  garbage-collection:
+    environment: main
+    permissions:
+      contents: read
+      actions: read
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY_ID: ${{ vars.REGISTRY_ID}}
+      WALLET: ${{ secrets.WALLET }}
+      VAOT_ID: ${{ vars.VAOT_ID}}
+      CU_URL: ${{ vars.CU_URL}}
+      GRAPHQL_URL: ${{ vars.GRAPHQL_URL}}
+      ARIO_PROCESS_ID: ${{ vars.ARIO_PROCESS_ID}}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+
+      - name: Setup
+        run: yarn
+
+      - name: Run Ant Garbage Collection
+        run: yarn ant-garbage-collection
+        id: ant-garbage-collection
+
+      - name: Notify Failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2.3.0
+        env:
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_TITLE: ANT Garbage Collection Failed!
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CUSTOM_PAYLOAD: |
+            {
+              "attachments": [
+                {
+                  "fallback": "ANT Garbage Collection Failed",
+                  "color": "danger",
+                  "title": "Details",
+                  "text": "The ANT Garbage Collection process has failed!",
+                  "fields": [
+                    {
+                      "title": "Network",
+                      "value": "mainnet",
+                      "short": true
+                    },
+                    {
+                      "title": "Process ID",
+                      "value": "${{ vars.REGISTRY_ID }}",
+                      "short": true
+                    },
+                    {
+                      "title": "GitHub Action",
+                      "value": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                      "short": false
+                    }
+                  ]
+                }
+              ]
+            }
+
+      # on success send a slack message
+      - name: Notify Success
+        if: success() && vars.NOTIFY_SUCCESS == 'true'
+        uses: rtCamp/action-slack-notify@v2.3.0
+        env:
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_TITLE: ANT Garbage Collection Success!
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CUSTOM_PAYLOAD: |
+            {
+              "attachments": [{
+                "fallback": "ANT Garbage Collection Success!",
+                "color": "good",
+                "title": "Collection Results",
+                "text": "The ANT Garbage Collection process has completed successfully!",
+                "fields": [
+                  {
+                    "title": "Process ID",
+                    "value": "${{ vars.REGISTRY_ID }}",
+                    "short": true
+                  },
+                  {
+                    "title": "GitHub Action",
+                    "value": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                    "short": false
+                  }
+                ]
+              }]
+            }
