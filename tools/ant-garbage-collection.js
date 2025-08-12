@@ -26,9 +26,13 @@ const cuUrl = process.env.CU_URL ?? 'https://cu.ardrive.io';
 const graphqlUrl = process.env.GRAPHQL_URL ?? 'https://arweave.net/graphql';
 
 const dryRun = process.argv.includes('--dry-run') ? true : false;
-const limit = process.argv.includes('--limit')
-  ? parseInt(process.argv[process.argv.indexOf('--limit') + 1])
-  : Infinity;
+// the ant registry has a max batch size of 1000 at the moment
+const limit = Math.max(
+  process.argv.includes('--limit')
+    ? parseInt(process.argv[process.argv.indexOf('--limit') + 1])
+    : 1000,
+  1000,
+);
 
 const ao = connect({
   CU_URL: cuUrl,
@@ -98,22 +102,37 @@ async function main() {
 
     function createUnregisterLuaTemplate(antIds) {
       return `
-    Send({
-      Target = '${registryId}',
-      Action = 'Batch-Unregister',
-      Data = '${JSON.stringify(antIds)}',
-    })\n
+        Send({
+          Target = '${registryId}',
+          Action = 'Batch-Unregister',
+          Data = '${JSON.stringify(antIds)}',
+        })\n
     `;
     }
+    function createUnregisterProposals(antIds) {
+      const proposals = [];
+      // if there is more than 1000 ants to unregister, we need to split the unregister into multiple proposals
+      if (antIds.length > 1000) {
+        for (let i = 0; i < antIds.length; i += limit) {
+          proposals.push(
+            createUnregisterLuaTemplate(antIds.slice(i, i + limit)),
+          );
+        }
+      } else {
+        proposals.push(createUnregisterLuaTemplate(antIds));
+      }
+      return proposals;
+    }
 
-    const unregisterLua = createUnregisterLuaTemplate(
-      antsToUnregister.slice(0, limit),
-    );
+    const unregisterProposals = createUnregisterProposals(antsToUnregister);
 
     if (dryRun) {
       console.log('Dry run enabled, skipping unregistration');
       console.log('Unregister Lua preview:');
-      console.log(unregisterLua);
+      unregisterProposals.forEach((proposal, index) => {
+        console.log('\n'.padStart(33, '='));
+        console.log(`Proposal ${index + 1}: ${proposal}`);
+      });
       process.exit(0);
     }
 
@@ -122,21 +141,26 @@ async function main() {
       ao,
     });
 
-    const proposalRes = await vaotProcess.send({
-      tags: [
-        {
-          name: 'Action',
-          value: 'Propose',
-        },
-        { name: 'Proposal-Type', value: 'Eval' },
-        { name: 'Vote', value: 'yay' },
-        { name: 'Process-Id', value: vaotId },
-      ],
-      data: unregisterLua,
-      signer: aoSigner,
-    });
+    for (const [index, unregisterLua] of unregisterProposals.entries()) {
+      const proposalRes = await vaotProcess.send({
+        tags: [
+          {
+            name: 'Action',
+            value: 'Propose',
+          },
+          { name: 'Proposal-Type', value: 'Eval' },
+          { name: 'Vote', value: 'yay' },
+          { name: 'Process-Id', value: vaotId },
+        ],
+        data: unregisterLua,
+        signer: aoSigner,
+      });
 
-    console.log(proposalRes);
+      console.log('\n'.padStart(33, '='));
+      console.log(
+        `Proposal ${proposalRes.proposalNumber} | Proposal Message ID: ${proposalRes.msgId} | For batch ${index + 1} of ${unregisterProposals.length}`,
+      );
+    }
   } catch (error) {
     console.error(error);
     process.exit(1);
