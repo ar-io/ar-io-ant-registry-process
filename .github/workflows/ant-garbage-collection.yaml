@@ -7,7 +7,7 @@ on:
 
 jobs:
   garbage-collection:
-    environment: main
+    environment: ${{ github.ref_name}}
     permissions:
       contents: read
       actions: read
