@@ -142,7 +142,7 @@ async function main() {
     });
 
     for (const [index, unregisterLua] of unregisterProposals.entries()) {
-      const proposalRes = await vaotProcess.send({
+      const { result: proposalRes } = await vaotProcess.send({
         tags: [
           {
             name: 'Action',
