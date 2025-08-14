@@ -33,7 +33,12 @@ jobs:
         run: yarn
 
       - name: Run Ant Garbage Collection
-        run: yarn ant-garbage-collection
+        run: |
+          GARBAGE_COLLECTION_OUTPUT=$(yarn ant-garbage-collection 2>&1)
+          echo "$GARBAGE_COLLECTION_OUTPUT"
+          # Extract proposal numbers and message IDs from the output
+          PROPOSALS=$(echo "$GARBAGE_COLLECTION_OUTPUT" | grep "Proposal [0-9]" | sed 's/^[[:space:]]*//' || echo "No proposals found")
+          echo "::set-output name=proposals::$PROPOSALS"
         id: ant-garbage-collection
 
       - name: Notify Failure
@@ -41,7 +46,7 @@ jobs:
         uses: rtCamp/action-slack-notify@v2.3.0
         env:
           SLACK_COLOR: ${{ job.status }}
-          SLACK_TITLE: ANT Garbage Collection Failed!
+          SLACK_TITLE: ANT Garbage Collection Encountered an Error!
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_CUSTOM_PAYLOAD: |
             {
@@ -54,7 +59,7 @@ jobs:
                   "fields": [
                     {
                       "title": "Network",
-                      "value": "mainnet",
+                      "value": "${{ github.ref_name }}",
                       "short": true
                     },
                     {
@@ -62,11 +67,21 @@ jobs:
                       "value": "${{ vars.REGISTRY_ID }}",
                       "short": true
                     },
-                    {
-                      "title": "GitHub Action",
-                      "value": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-                      "short": false
-                    }
+                                      {
+                    "title": "Proposals Created",
+                    "value": "${{ steps.ant-garbage-collection.outputs.proposals || 'None created before failure' }}",
+                    "short": false
+                  },
+                  {
+                    "title": "Vote on proposals in VAOT",
+                    "value": "https://vaot.ar.io/#/${{ vars.VAOT_ID }}",
+                    "short": false
+                  },
+                  {
+                    "title": "GitHub Action",
+                    "value": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                    "short": false
+                  }
                   ]
                 }
               ]
@@ -74,7 +89,7 @@ jobs:
 
       # on success send a slack message
       - name: Notify Success
-        if: success() && vars.NOTIFY_SUCCESS == 'true'
+        if: success()
         uses: rtCamp/action-slack-notify@v2.3.0
         env:
           SLACK_COLOR: ${{ job.status }}
@@ -89,9 +104,24 @@ jobs:
                 "text": "The ANT Garbage Collection process has completed successfully!",
                 "fields": [
                   {
+                      "title": "Network",
+                      "value": "${{ github.ref_name }}",
+                      "short": true
+                    },
+                  {
                     "title": "Process ID",
                     "value": "${{ vars.REGISTRY_ID }}",
                     "short": true
+                  },
+                  {
+                    "title": "Proposals Created",
+                    "value": "${{ steps.ant-garbage-collection.outputs.proposals || 'No proposals created' }}",
+                    "short": false
+                  },
+                  {
+                    "title": "Vote on proposals in VAOT",
+                    "value": "https://vaot.ar.io/#/${{ vars.VAOT_ID }}",
+                    "short": false
                   },
                   {
                     "title": "GitHub Action",
