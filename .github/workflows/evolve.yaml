@@ -1,29 +1,7 @@
-name: Build and Test
+name: Evolve Process
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - 'src/**'
-      - 'spec/**'
-      - 'tests/**'
-      - 'tools/**'
-      - '*.rockspec'
-      - 'package.json'
-      - 'yarn.lock'
-  push:
-    branches:
-      - develop
-      - main
-    paths:
-      - 'src/**'
-      - 'spec/**'
-      - 'tests/**'
-      - 'tools/**'
-      - '*.rockspec'
-      - 'package.json'
-      - 'yarn.lock'
-
 jobs:
   unit:
     runs-on: ubuntu-24.04
@@ -62,27 +40,10 @@ jobs:
       - run: yarn --frozen-lockfile
       - run: yarn aos:build
       - run: yarn test:integration
-  check-lua-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      lua_changed: ${{ steps.filter.outputs.lua }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check for Lua file changes
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            lua:
-              - '**/*.lua'
   evolve:
-    # Run on main branch only
+    # Run only when should_propose is true
     runs-on: ubuntu-latest
-    if:
-      (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main') &&
-      needs.check-lua-changes.outputs.lua_changed == 'true'
-    needs: [integration, unit, check-lua-changes]
+    needs: [integration, unit]
     environment: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v4
