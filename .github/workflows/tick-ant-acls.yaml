@@ -36,6 +36,35 @@ jobs:
         run: yarn tick-ant-acls
         id: tick-ant-acls
 
+      - name: Check for Failed ANTs
+        id: failed-ants
+        run: |
+          if [ -f failed-ants-summary.txt ]; then
+            echo "has_failures=true" >> $GITHUB_OUTPUT
+            # Read file content and escape for JSON
+            SUMMARY=$(cat failed-ants-summary.txt)
+            echo "summary<<EOF" >> $GITHUB_OUTPUT
+            echo "$SUMMARY" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "has_failures=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Notify Failed ANTs
+        if: steps.failed-ants.outputs.has_failures == 'true'
+        uses: rtCamp/action-slack-notify@v2.3.0
+        env:
+          SLACK_COLOR: warning
+          SLACK_TITLE: ANT Registry - Failed State Checks
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_MESSAGE: |
+            The following ANTs failed state checks on cu.ao-testnet.xyz:
+            ```
+            ${{ steps.failed-ants.outputs.summary }}
+            ```
+            
+            GitHub Action: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
       - name: Notify Failure
         if: failure()
         uses: rtCamp/action-slack-notify@v2.3.0

@@ -3,6 +3,9 @@ import { ANTRegistry, AOProcess, ARIO } from '@ar.io/sdk';
 import { pLimit } from 'plimit-lit';
 import Arweave from 'arweave';
 import { DockerComposeEnvironment, Wait } from 'testcontainers';
+import fs from 'node:fs';
+
+const stateCheckCuUrl = 'https://cu.ao-testnet.xyz';
 
 const projectRootPath = process.cwd();
 
@@ -45,7 +48,7 @@ const antRegistry = ANTRegistry.init({
 });
 
 const fetchAllArNSProcessIds = async () => {
-  const antIds = new Set();
+  const antMap = new Map(); // processId -> arnsName
   let cursor = undefined;
   let hasMore = true;
 
@@ -58,11 +61,43 @@ const fetchAllArNSProcessIds = async () => {
     cursor = result.nextCursor;
     hasMore = result.hasMore;
     for (const item of result.items) {
-      antIds.add(item.processId);
+      antMap.set(item.processId, item.name);
     }
   }
-  console.log(`Found ${antIds.size} ANTs`);
-  return antIds;
+  console.log(`Found ${antMap.size} ANTs`);
+  return antMap;
+};
+
+const extractCuNumber = (url) => {
+  const match = url.match(/cu(\d+)\.ao-testnet\.xyz/);
+  return match ? match[1] : 'unknown';
+};
+
+const checkProcessState = async (processId, arnsName) => {
+  const url = `${stateCheckCuUrl}/state/${processId}`;
+  try {
+    const response = await fetch(url, {
+      method: 'HEAD',
+      redirect: 'follow',
+    });
+
+    const finalUrl = response.url;
+    const cuNumber = extractCuNumber(finalUrl);
+
+    if (!response.ok) {
+      console.error(
+        `HEAD request failed | ArNS: ${arnsName} | ProcessId: ${processId} | CU: cu${cuNumber} | Status: ${response.status}`,
+      );
+      return { processId, arnsName, success: false, cuNumber, status: response.status };
+    }
+
+    return { processId, arnsName, success: true, cuNumber, status: response.status };
+  } catch (error) {
+    console.error(
+      `HEAD request error | ArNS: ${arnsName} | ProcessId: ${processId} | Error: ${error.message}`,
+    );
+    return { processId, arnsName, success: false, cuNumber: 'unknown', status: 'error' };
+  }
 };
 
 const fetchAllProcessIdsInRegistry = async () => {
@@ -98,22 +133,66 @@ async function main() {
   console.log('Local CU ready!');
 
   try {
-    const [processIdsForNames, processIdsInRegistry] = await Promise.all([
+    const [processIdToNameMap, processIdsInRegistry] = await Promise.all([
       fetchAllArNSProcessIds(),
       fetchAllProcessIdsInRegistry(),
     ]);
 
-    const antsToRegister = Array.from(processIdsForNames).filter(
-      (antId) => !processIdsInRegistry.includes(antId),
+    const antsToRegister = Array.from(processIdToNameMap.entries()).filter(
+      ([antId]) => !processIdsInRegistry.includes(antId),
     );
     console.log(`Found ${antsToRegister.length} ANTs to register`);
-    const throttle = pLimit(50);
+
+    // Check process state with HEAD requests (limit concurrency to 5)
+    console.log('Checking process states via HEAD requests...');
+    const stateCheckThrottle = pLimit(5);
+    const stateCheckResults = await Promise.all(
+      antsToRegister.map(([processId, arnsName]) =>
+        stateCheckThrottle(() => checkProcessState(processId, arnsName)),
+      ),
+    );
+
+    const validAnts = stateCheckResults.filter((result) => result.success);
+    const failedAnts = stateCheckResults.filter((result) => !result.success);
+
+    console.log(
+      `State check complete: ${validAnts.length} valid, ${failedAnts.length} failed`,
+    );
+
+    if (failedAnts.length > 0) {
+      console.log('\n--- Failed ANTs Summary ---');
+      const sortedFailedAnts = [...failedAnts].sort((a, b) => {
+        const aNum = a.cuNumber === 'unknown' ? Infinity : parseInt(a.cuNumber, 10);
+        const bNum = b.cuNumber === 'unknown' ? Infinity : parseInt(b.cuNumber, 10);
+        return aNum - bNum;
+      });
+      const failedAntLines = [];
+      for (const ant of sortedFailedAnts) {
+        const line = `ArNS: ${ant.arnsName} | ANT Process ID: ${ant.processId} | CU: cu${ant.cuNumber} | HTTP Status: ${ant.status}`;
+        console.log(line);
+        failedAntLines.push(line);
+      }
+      console.log('----------------------------\n');
+
+      // Write failed ANTs summary to file for CI reporting
+      const summaryContent = failedAntLines.join('\n');
+      fs.writeFileSync('failed-ants-summary.txt', summaryContent);
+    } else {
+      // Clean up file if no failures
+      if (fs.existsSync('failed-ants-summary.txt')) {
+        fs.unlinkSync('failed-ants-summary.txt');
+      }
+    }
+
+    // Register only valid ANTs
+    console.log(`Registering ${validAnts.length} valid ANTs...`);
+    const registerThrottle = pLimit(50);
 
     await Promise.all(
-      antsToRegister.map((antId) =>
-        throttle(() =>
+      validAnts.map((ant) =>
+        registerThrottle(() =>
           antRegistry
-            .register({ processId: antId })
+            .register({ processId: ant.processId })
             .catch((e) => console.error(e)),
         ),
       ),
