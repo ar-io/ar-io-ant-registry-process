@@ -3,7 +3,7 @@ name: ANT Registration Watchdog
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *' # Run once every 6 hours
+    - cron: "0 */6 * * *" # Run once every 6 hours
 
 jobs:
   monitor:
@@ -26,8 +26,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: '.nvmrc'
-          cache: 'yarn'
+          node-version-file: ".nvmrc"
+          cache: "yarn"
 
       - name: Setup
         run: yarn
@@ -62,7 +62,7 @@ jobs:
             ```
             ${{ steps.failed-ants.outputs.summary }}
             ```
-            
+
             GitHub Action: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Notify Failure

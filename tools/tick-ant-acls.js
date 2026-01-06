@@ -73,6 +73,132 @@ const extractCuNumber = (url) => {
   return match ? match[1] : 'unknown';
 };
 
+const verifyAoProcesses = async (antsToVerify) => {
+  const processIdToArnsName = new Map(
+    antsToVerify.map(([processId, arnsName]) => [processId, arnsName]),
+  );
+  const processIds = Array.from(processIdToArnsName.keys());
+
+  // Batch into chunks of 100 to avoid query size limits
+  const BATCH_SIZE = 100;
+  const batches = [];
+  for (let i = 0; i < processIds.length; i += BATCH_SIZE) {
+    batches.push(processIds.slice(i, i + BATCH_SIZE));
+  }
+
+  const results = [];
+
+  for (const batch of batches) {
+    const idsString = batch.map((id) => `"${id}"`).join(', ');
+    const query = `
+      query {
+        transactions(ids: [${idsString}], first: ${batch.length}) {
+          edges {
+            node {
+              id
+              tags {
+                name
+                value
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    try {
+      const response = await fetch(graphqlUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+
+      if (!response.ok) {
+        console.error(`GQL batch request failed | Status: ${response.status}`);
+        // Mark all in batch as failed
+        for (const processId of batch) {
+          const arnsName = processIdToArnsName.get(processId);
+          results.push({
+            processId,
+            arnsName,
+            isProcess: false,
+            reason: `GQL error: ${response.status}`,
+          });
+        }
+        continue;
+      }
+
+      const data = await response.json();
+      const edges = data?.data?.transactions?.edges ?? [];
+
+      // Build a map of found transactions
+      const foundTransactions = new Map();
+      for (const edge of edges) {
+        const id = edge.node.id;
+        foundTransactions.set(id, edge.node.tags);
+      }
+
+      // Process each ID in the batch
+      for (const processId of batch) {
+        const arnsName = processIdToArnsName.get(processId);
+        const tags = foundTransactions.get(processId);
+
+        if (!tags) {
+          console.error(
+            `GQL: No transaction found | ArNS: ${arnsName} | ProcessId: ${processId}`,
+          );
+          results.push({
+            processId,
+            arnsName,
+            isProcess: false,
+            reason: 'No transaction found',
+          });
+          continue;
+        }
+
+        const hasScheduler = tags.some((tag) => tag.name === 'Scheduler');
+        const hasTypeProcess = tags.some(
+          (tag) => tag.name === 'Type' && tag.value === 'Process',
+        );
+        const hasModule = tags.some((tag) => tag.name === 'Module');
+
+        if (!hasScheduler || !hasTypeProcess || !hasModule) {
+          const missing = [];
+          if (!hasScheduler) missing.push('Scheduler');
+          if (!hasTypeProcess) missing.push('Type:Process');
+          if (!hasModule) missing.push('Module');
+          console.error(
+            `GQL: Not a valid process | ArNS: ${arnsName} | ProcessId: ${processId} | Missing: ${missing.join(', ')}`,
+          );
+          results.push({
+            processId,
+            arnsName,
+            isProcess: false,
+            reason: `Missing: ${missing.join(', ')}`,
+          });
+          continue;
+        }
+
+        results.push({ processId, arnsName, isProcess: true });
+      }
+    } catch (error) {
+      console.error(`GQL batch request error | Error: ${error.message}`);
+      // Mark all in batch as failed
+      for (const processId of batch) {
+        const arnsName = processIdToArnsName.get(processId);
+        results.push({
+          processId,
+          arnsName,
+          isProcess: false,
+          reason: `Error: ${error.message}`,
+        });
+      }
+    }
+  }
+
+  return results;
+};
+
 const checkProcessState = async (processId, arnsName) => {
   const url = `${stateCheckCuUrl}/state/${processId}`;
   try {
@@ -143,11 +269,30 @@ async function main() {
     );
     console.log(`Found ${antsToRegister.length} ANTs to register`);
 
+    // First, verify each process ID is a valid AO process via GraphQL
+    console.log('Verifying process IDs via GraphQL...');
+    const gqlVerifyResults = await verifyAoProcesses(antsToRegister);
+
+    const verifiedProcesses = gqlVerifyResults.filter((result) => result.isProcess);
+    const invalidProcesses = gqlVerifyResults.filter((result) => !result.isProcess);
+
+    console.log(
+      `GQL verification complete: ${verifiedProcesses.length} valid processes, ${invalidProcesses.length} invalid`,
+    );
+
+    if (invalidProcesses.length > 0) {
+      console.log('\n--- Invalid Process IDs (not AO processes) ---');
+      for (const p of invalidProcesses) {
+        console.log(`ArNS: ${p.arnsName} | ProcessId: ${p.processId} | Reason: ${p.reason}`);
+      }
+      console.log('-----------------------------------------------\n');
+    }
+
     // Check process state with HEAD requests (limit concurrency to 5)
     console.log('Checking process states via HEAD requests...');
     const stateCheckThrottle = pLimit(5);
     const stateCheckResults = await Promise.all(
-      antsToRegister.map(([processId, arnsName]) =>
+      verifiedProcesses.map(({ processId, arnsName }) =>
         stateCheckThrottle(() => checkProcessState(processId, arnsName)),
       ),
     );
