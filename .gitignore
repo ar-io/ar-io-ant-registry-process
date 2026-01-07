@@ -1,5 +1,7 @@
 
 key.json
+failed-ants-summary.txt
+
 # Logs
 logs
 *.log
@@ -132,3 +134,4 @@ dist
 .pnp.*
 
 .DS_Store
+._*
