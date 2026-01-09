@@ -161,12 +161,14 @@ const verifyAoProcesses = async (antsToVerify) => {
           (tag) => tag.name === 'Type' && tag.value === 'Process',
         );
         const hasModule = tags.some((tag) => tag.name === 'Module');
+        const hasAuthority = tags.some((tag) => tag.name === 'Authority');
 
-        if (!hasScheduler || !hasTypeProcess || !hasModule) {
+        if (!hasScheduler || !hasTypeProcess || !hasModule || !hasAuthority) {
           const missing = [];
           if (!hasScheduler) missing.push('Scheduler');
           if (!hasTypeProcess) missing.push('Type:Process');
           if (!hasModule) missing.push('Module');
+          if (!hasAuthority) missing.push('Authority');
           console.error(
             `GQL: Not a valid process | ArNS: ${arnsName} | ProcessId: ${processId} | Missing: ${missing.join(', ')}`,
           );
