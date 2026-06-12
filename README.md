@@ -1,3 +1,7 @@
+<!-- prettier-ignore -->
+> [!CAUTION]
+> **This repository has been archived.** The AR.IO smart contracts have migrated from AO to Solana. All smart contract code now lives at [ar-io/ar-io-solana-contracts](https://github.com/ar-io/ar-io-solana-contracts).
+
 # ANT Registry
 
 This repository contains the ANT Registry AO Process tooling and lua source
